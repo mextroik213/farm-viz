@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ферма «Агроинвест» — виртуальная экскурсия</title>
+<style>
+:root{
+  --panel:#fff; --border:#c9d2c9;
+  --text:#1f2d1c; --text-muted:#6b7a68;
+  --accent:#4a8a3a; --accent-hover:#3a7029;
+  --shadow:0 6px 24px rgba(20,40,20,.18);
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  font-size:14px;color:var(--text);background:#7a9e44;overflow:hidden;
+}
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:60px;
+  background:rgba(255,255,255,.94);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;z-index:100;
+  box-shadow:0 2px 12px rgba(20,40,20,.06);backdrop-filter:blur(6px);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#4a8a3a,#7bc4e0);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:0 2px 8px rgba(74,138,58,.3);
+}
+.brand-text h1{font-size:16px;font-weight:700;margin:0;letter-spacing:.2px}
+.brand-text p{font-size:11px;color:var(--text-muted);margin:2px 0 0}
+.top-actions{display:flex;gap:10px;align-items:center}
+.tbtn{
+  background:var(--panel);border:1px solid var(--border);border-radius:22px;
+  padding:8px 16px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:6px;
+}
+.tbtn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tbtn .icon{font-size:15px}
+
+.anim-group{
+  display:flex;gap:4px;align-items:center;
+  padding-right:10px;margin-right:4px;
+  border-right:1px solid var(--border);
+}
+.tbtn.icon-only{
+  padding:8px 11px;font-size:13px;min-width:36px;
+  justify-content:center;line-height:1;
+}
+.tbtn.icon-only.active{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+
+#map{
+  position:fixed;top:60px;left:0;right:0;bottom:0;
+  cursor:grab;user-select:none;background:#7a9e44;
+  touch-action: none;
+}
+#map.dragging{cursor:grabbing}
+#plan{width:100%;height:100%;display:block}
+
+.building-group{cursor:pointer;transition:filter .2s ease}
+.building-group:hover{filter:drop-shadow(0 0 8px rgba(74,138,58,.7))}
+
+/* --- Анимации --- */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes dust-fade { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(3); } }
+@keyframes walk-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes cow-eat { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-15deg); } }
+
+.hazard-light { animation: blink 0.5s infinite; }
+.dust-particle { animation: dust-fade 1s ease-out forwards; }
+.worker-body { animation: walk-bob 0.4s infinite; }
+.cow-body { animation: cow-eat 1.5s ease-in-out infinite; }
+.cow-body.delay { animation-delay: 0.5s; }
+.cow-body.delay2 { animation-delay: 1s; }
+
+#dust-layer, #hose-layer, #truck-layer, #ambient-ground, #sky-layer { pointer-events: none; }
+
+.map-controls{
+  position:fixed;right:16px;bottom:16px;
+  display:flex;flex-direction:column;gap:6px;z-index:50;
+  border-radius:var(--radius);background:rgba(255,255,255,.94);
+  padding:6px;box-shadow:var(--shadow);
+}
+.map-controls button{
+  width:40px;height:40px;border:none;border-radius:8px;
+  background:transparent;cursor:pointer;font-size:18px;color:var(--text);
+  transition:background .15s;
+}
+.map-controls button:hover{background:var(--accent);color:#fff}
+
+.card{
+  position:fixed;top:80px;right:20px;
+  width:360px;max-width:calc(100vw - 40px);
+  max-height:calc(100vh - 100px);
+  background:var(--panel);border-radius:var(--radius);
+  box-shadow:var(--shadow);z-index:80;display:none;
+  overflow:hidden;flex-direction:column;
+}
+.card.visible{display:flex;animation:cardIn .25s ease-out}
+@keyframes cardIn{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+.card-header{
+  padding:18px 20px 14px;
+  background:linear-gradient(135deg,#4a8a3a,#6aab4a);
+  color:#fff;position:relative;
+}
+.card-header h2{margin:0 0 4px;font-size:20px;font-weight:700}
+.card-header .code{
+  font-size:13px;opacity:.9;display:inline-block;
+  background:rgba(255,255,255,.22);padding:2px 10px;border-radius:12px;
+}
+.card-close{
+  position:absolute;top:14px;right:14px;
+  width:30px;height:30px;border:none;border-radius:50%;
+  background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.card-close:hover{background:rgba(255,255,255,.3)}
+.card-body{padding:16px 20px;overflow-y:auto;flex:1}
+.spec-row{
+  display:flex;justify-content:space-between;
+  padding:9px 0;border-bottom:1px dashed var(--border);font-size:13.5px;
+}
+.spec-row:last-child{border-bottom:none}
+.spec-row .label{color:var(--text-muted);flex:0 0 auto;padding-right:12px}
+.spec-row .value{text-align:right;font-weight:500;color:var(--text)}
+.card-desc{
+  margin-top:14px;padding:12px 14px;background:#f4f8f0;
+  border-left:3px solid var(--accent);border-radius:6px;
+  font-size:13px;line-height:1.5;color:#4a5a45;
+}
+.card-actions{
+  padding:14px 20px 18px;border-top:1px solid var(--border);
+  display:flex;gap:10px;
+}
+.card-actions a{
+  flex:1;text-align:center;padding:11px 14px;border-radius:8px;
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  text-decoration:none;border:none;display:inline-flex;
+  align-items:center;justify-content:center;gap:6px;
+  transition:all .15s;background:var(--accent);color:#fff;
+}
+.card-actions a:hover{background:var(--accent-hover)}
+
+.legend{
+  position:fixed;left:16px;bottom:16px;
+  background:rgba(255,255,255,.94);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px 16px;z-index:50;
+  max-width:220px;font-size:12px;
+}
+.legend h3{
+  margin:0 0 10px;font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text-muted);font-weight:700;
+}
+.legend-item{display:flex;align-items:center;gap:8px;padding:3px 0}
+.legend-swatch{
+  width:16px;height:16px;border-radius:4px;
+  flex:0 0 auto;border:1px solid rgba(0,0,0,.12);
+}
+.hint{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+  background:rgba(255,255,255,.94);border-radius:22px;padding:8px 18px;
+  font-size:12.5px;color:var(--text-muted);box-shadow:var(--shadow);
+  z-index:40;transition:opacity .3s;text-align:center;
+}
+.hint.hidden{opacity:0;pointer-events:none}
+
+@media (max-width:768px){
+  .topbar{padding:0 10px;height:54px}
+  .brand-text h1{font-size:13px}
+  .brand-text p{display:none}
+  .brand-logo{width:34px;height:34px;font-size:17px}
+  .tbtn{padding:7px 12px;font-size:12px}
+  .tbtn .label{display:none}
+  .top-actions{gap:6px}
+  .anim-group{gap:3px;padding-right:6px;margin-right:2px}
+  .tbtn.icon-only{padding:7px 9px;min-width:32px;font-size:12px}
+  #map{top:54px}
+  .card{
+    top:auto;bottom:0;left:0;right:0;width:100%;
+    max-width:none;max-height:70vh;
+    border-radius:var(--radius) var(--radius) 0 0;
+  }
+  @keyframes cardIn{ from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .legend{display:none}
+  .map-controls{right:10px;bottom:10px}
+  .hint{font-size:11px;padding:6px 14px;max-width:calc(100vw - 24px)}
+}
+</style>
+</head><body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">🌾</div>
+    <div class="brand-text">
+      <h1>Ферма «Агроинвест»</h1>
+      <p>Виртуальная экскурсия</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <div class="anim-group" role="group" aria-label="Анимация молоковоза">
+      <button class="tbtn icon-only" id="anim-play" title="Запустить / продолжить">▶</button>
+      <button class="tbtn icon-only" id="anim-pause" title="Пауза">⏸</button>
+      <button class="tbtn icon-only" id="anim-reset" title="Сбросить">⟳</button>
+    </div>
+    <button class="tbtn" id="sound-toggle" title="Звук">
+      <span class="icon">🔇</span><span class="label">Звук</span>
+    </button>
+    <button class="tbtn" id="tour-toggle" title="Экскурсия">
+      <span class="icon">🎥</span><span class="label">3D Тур</span>
+    </button>
+  </div>
+</div>
+
+<div id="map"><svg id="plan" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg></div>
+
+<div class="map-controls">
+  <button id="zoom-in" title="Приблизить">+</button>
+  <button id="zoom-out" title="Отдалить">−</button>
+  <button id="zoom-fit" title="Показать всё">⛶</button>
+</div>
+
+<div class="legend">
+  <h3>Обозначения</h3>
+  <div id="legend-list"></div>
+</div>
+
+<div class="hint" id="hint">Кликните на корпус · Колесо — зум · Перетаскивание — панорама · ▶ — анимация молоковоза</div>
+
+<div class="card" id="card">
+  <div class="card-header">
+    <h2 id="card-name">—</h2>
+    <span class="code" id="card-code">—</span>
+    <button class="card-close" id="card-close" type="button">×</button>
+  </div>
+  <div class="card-body" id="card-body"></div>
+  <div class="card-actions">
+    <a id="card-tour" href="https://jerseyfarm.ru/3dtour/Agroinvest.html" target="_blank" rel="noopener">
+      <span>🎥</span> Открыть 3D-тур
+    </a>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ДАННЫЕ ФЕРМЫ
+   ============================================================ */
+var FARM = {
+  buildings: [
+    { id:"K1", code:"К1", name:"Корпус 1", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Первый корпус.", tourScene:"k1", coords:[[1400960,458250],[1401100,458250],[1401100,458310],[1400960,458310]] },
+    { id:"K2", code:"К2", name:"Корпус 2", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k2", coords:[[1400960,458160],[1401100,458160],[1401100,458220],[1400960,458220]] },
+    { id:"DMB", code:"ДМБ", name:"Доильно-молочный блок", group:"Корпуса", purpose:"Переработка молока", capacity:20, unit:"тонн/сутки", description:"Приёмка молока.", tourScene:"dmb", coords:[[1400960,458070],[1401100,458070],[1401100,458130],[1400960,458130]] },
+    { id:"K3", code:"К3", name:"Корпус 3", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k3", coords:[[1400960,457980],[1401100,457980],[1401100,458040],[1400960,458040]] },
+    { id:"K4", code:"К4", name:"Корпус 4", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k4", coords:[[1400960,457890],[1401100,457890],[1401100,457950],[1400960,457950]] },
+    { id:"K5", code:"К5", name:"Корпус 5", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k5", coords:[[1400960,457800],[1401100,457800],[1401100,457860],[1400960,457860]] },
+    { id:"K6", code:"К6", name:"Корпус 6", group:"Корпуса", purpose:"Родильное отделение", capacity:60, unit:"голов", description:"Корпус для отёла.", tourScene:"k6", coords:[[1400960,457710],[1401100,457710],[1401100,457770],[1400960,457770]] },
+    { id:"K7", code:"К7", name:"Корпус 7", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k7", coords:[[1400960,457620],[1401100,457620],[1401100,457680],[1400960,457680]] },
+    { id:"K8", code:"К8", name:"Корпус 8", group:"Корпуса", purpose:"Площадка для телят", capacity:80, unit:"голов", description:"Телятник.", tourScene:"k8", coords:[[1400820,457800],[1400880,457800],[1400880,458250],[1400820,458250]] },
+    { id:"K11", code:"К11", name:"Корпус 11", group:"Корпуса", purpose:"Крематорий", capacity:0, unit:"", description:"Кремация отходов.", tourScene:"k11", coords:[[1400829,458170],[1400875,458170],[1400874,458204],[1400829,458204]] },
+    { id:"K12", code:"К12", name:"Корпус 12", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k12", coords:[[1400773,458248],[1400818,458248],[1400818,458281],[1400773,458281]] },
+    { id:"K13", code:"К13", name:"Корпус 13", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k13", coords:[[1400773,458294],[1400818,458294],[1400818,458327],[1400773,458327]] },
+    { id:"K14", code:"К14", name:"Корпус 14", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k14", coords:[[1400773,458341],[1400818,458341],[1400818,458374],[1400773,458374]] },
+    { id:"K15", code:"К15", name:"Корпус 15", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k15", coords:[[1400832,458273],[1400859,458273],[1400859,458379],[1400832,458379]] },
+    { id:"K9", code:"К9", name:"Корпус 9", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k9", coords:[[1401180,457620],[1401240,457620],[1401240,457800],[1401180,457800]] },
+    { id:"K10", code:"К10", name:"Корпус 10", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k10", coords:[[1401180,457890],[1401240,457890],[1401240,458070],[1401180,458070]] },
+    { id:"Sennik", code:"Сенник", name:"Сенник / кормоцех", group:"Корма и склады", purpose:"Хранение сена", capacity:0, unit:"", description:"Хранение грубых кормов.", tourScene:"", coords:[[1400820,458310],[1400880,458310],[1400880,458450],[1400820,458450]] },
+    { id:"ST1", code:"СТ1", name:"Силосная траншея 1", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1401140,457800],[1401160,457800],[1401160,458250],[1401140,458250]] },
+    { id:"Laguna1", code:"Лагуна 1", name:"Лагуна 1", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Лагуна стоков.", tourScene:"laguna1", coords:[[1401150,457500],[1401250,457500],[1401250,457580],[1401150,457580]] },
+    { id:"Laguna2", code:"Лагуна 2", name:"Лагуна 2", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Вторая лагуна.", tourScene:"laguna2", coords:[[1401280,457500],[1401380,457500],[1401380,457580],[1401280,457580]] },
+    { id:"Prud", code:"Пруд", name:"Пожарный водоём", group:"Водоёмы", purpose:"Пожарный запас", capacity:0, unit:"", description:"Пожарный водоём.", tourScene:"prud", coords:[[1401130,458350],[1401180,458350],[1401180,458400],[1401130,458400]] },
+    { id:"Ofis", code:"Офис", name:"АБК / офис", group:"Служебные", purpose:"Администрация", capacity:0, unit:"", description:"АБК.", tourScene:"ofis", coords:[[1401130,458250],[1401180,458250],[1401180,458310],[1401130,458310]] },
+    { id:"KPPV", code:"КПП Верх", name:"КПП 1 — верхний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Верхний въезд.", tourScene:"kpp-verh", coords:[[1401110,458270],[1401130,458270],[1401130,458290],[1401110,458290]] },
+    { id:"KPPN", code:"КПП Низ", name:"КПП 2 — нижний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Нижний въезд.", tourScene:"kpp-niz", coords:[[1400790,457550],[1400810,457550],[1400810,457570],[1400790,457570]] }
+  ],
+  truckRoute: {
+    speed: 100, loadDuration: 3.0,
+    points: [
+      { x:1400800, y:457560 }, { x:1400940, y:457560 }, { x:1400940, y:458100 },
+      { x:1400940, y:458100, action:"load" },
+      { x:1401110, y:458100 }, { x:1401110, y:458280 }, { x:1401130, y:458280 },
+      { x:1401600, y:458280 }, { x:1403000, y:458280 }
+    ]
+  }
+};
+
+var STYLE = {
+  clearing:"#c7d1a8", forestBelt:"#7a9e44",
+  road:"#e8dcc0", roadBorder:"#b8a878", roadLine:"#d8c898",
+  highway:"#6a6a6a", highwayBorder:"#4a4a4a", highwayLine:"#f0f0f0",
+  waterLight:"#bfe8f5", waterBorder:"#4a9fc4", laguna:"#2a2a20", lagunaBorder:"#1a1a10",
+  label:"#1a1a1a", labelBg:"#ffffff"
+};
+
+var COLORS_BY_GROUP = {
+  "Корпуса":        { fill:"#e8e0d0", stroke:"#8a7a60", roof:"#fce84a", roofLine:"#d4c020" }, 
+  "Корма и склады": { fill:"#d8d0c0", stroke:"#8a7a48", roof:"#f0e4c0", roofLine:"#a89868" },
+  "Площадки":       { fill:"#b8b0a0", stroke:"#8a8060", roof:"#c8c0b0", roofLine:"#a89a70" },
+  "Водоёмы":        { fill:"#3a3a2a", stroke:"#1a1a10", roof:"#4a4a32", roofLine:"#1a1a10" },
+  "Служебные":      { fill:"#e0e0e0", stroke:"#707070", roof:"#f0f0f0", roofLine:"#909090" }
+};
+
+var ROADS = [
+  { pts:[[1400940,457550],[1400940,458300]], w:8 },
+  { pts:[[1401110,457550],[1401110,458300]], w:8 },
+  { pts:[[1400940,458100],[1401110,458100]], w:8 },
+  { pts:[[1400940,458280],[1401130,458280]], w:8 },
+  { pts:[[1400800,457560],[1400940,457560]], w:6 },
+  { pts:[[1401110,458280],[1403200,458280]], w:8 }
+];
+
+var APP = { svg:null, viewBox:{x:0,y:0,w:1000,h:1000}, baseViewBox:{x:0,y:0,w:1000,h:1000}, bounds:null, buildingBounds:null, isDragging:false };
+var TRUCK = { el:null, milkEl:null, hazardL:null, hazardR:null, statusEl:null, hoseEl:null, dustLayer:null, pts:[], segs:[], total:0, loadDist:0, dist:0, angle:0, state:"idle", prevState:null, loadTimer:0, loaded:false, lastTs:0, rafId:null, dustTimer:0, bouncePhase:0 };
+
+var AMBIENT = {
+  cows: [], tractors: [], workers: [], airplane: null,
+  lastTs: 0, rafId: null
+};
+
+function computeBounds(){
+  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  FARM.buildings.forEach(function(b){
+    b.coords.forEach(function(c){
+      if(c[0]<minX)minX=c[0]; if(c[0]>maxX)maxX=c[0];
+      if(c[1]<minY)minY=c[1]; if(c[1]>maxY)maxY=c[1];
+    });
+  });
+  APP.buildingBounds = { minX:minX, minY:minY, maxX:maxX, maxY:maxY };
+  var w = maxX - minX, h = maxY - minY;
+  APP.bounds = { minX: minX - w*0.35, maxX: maxX + w*0.55, minY: minY - h*0.20, maxY: maxY + h*0.20 };
+}
+
+function toSvg(x, y){ var b = APP.bounds; return [ x - b.minX, b.maxY - y ]; }
+
+function pathFromCoords(coords, close){
+  var pts = coords.map(function(c){ return toSvg(c[0], c[1]); });
+  var d = "M " + pts[0][0] + " " + pts[0][1];
+  for(var i=1;i<pts.length;i++){ d += " L " + pts[i][0] + " " + pts[i][1]; }
+  if(close) d += " Z";
+  return d;
+}
+
+function bboxOfCoords(coords){
+  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  coords.forEach(function(c){ if(c[0]<minX)minX=c[0]; if(c[0]>maxX)maxX=c[0]; if(c[1]<minY)minY=c[1]; if(c[1]>maxY)maxY=c[1]; });
+  return { minX:minX, minY:minY, maxX:maxX, maxY:maxY, w:maxX-minX, h:maxY-minY };
+}
+
+var SVG_NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){ var e = document.createElementNS(SVG_NS, tag); if(attrs) for(var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+function makeRandom(seed){ var s = seed; return function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+
+function buildDefs(){
+  var defs = el("defs", {});
+  
+  var sh = el("filter", { id:"soft-shadow", x:"-25%", y:"-25%", width:"150%", height:"150%" });
+  sh.appendChild(el("feGaussianBlur", { in:"SourceAlpha", stdDeviation:"2" }));
+  sh.appendChild(el("feOffset", { dx:"3", dy:"5", result:"off" }));
+  var ct = el("feComponentTransfer", { in:"off", result:"shadow" });
+  ct.appendChild(el("feFuncA", { type:"linear", slope:"0.3" }));
+  sh.appendChild(ct);
+  var merge = el("feMerge", {});
+  merge.appendChild(el("feMergeNode", { in:"shadow" }));
+  merge.appendChild(el("feMergeNode", { in:"SourceGraphic" }));
+  sh.appendChild(merge);
+  defs.appendChild(sh);
+
+  var wg = el("radialGradient", { id:"pond-grad", cx:"35%", cy:"30%", r:"75%" });
+  wg.appendChild(el("stop", { offset:"0%", "stop-color":"#c8ecf7" }));
+  wg.appendChild(el("stop", { offset:"100%","stop-color":"#6cbad9" }));
+  defs.appendChild(wg);
+
+  var gravelPat = el("pattern", { id:"gravel-pattern", width:256, height:256, patternUnits:"userSpaceOnUse" });
+  gravelPat.appendChild(el("image", { href:"gravel.jpg", width:256, height:256, preserveAspectRatio:"xMidYMid slice" }));
+  defs.appendChild(gravelPat);
+
+  var roofPat = el("pattern", { id:"roof-pattern", width:128, height:128, patternUnits:"userSpaceOnUse" });
+  roofPat.appendChild(el("image", { href:"roof.jpg", width:128, height:128, preserveAspectRatio:"xMidYMid slice" }));
+  defs.appendChild(roofPat);
+
+  var tankGrad = el("linearGradient", { id:"tank-grad", x1:"0%", y1:"0%", x2:"0%", y2:"100%" });
+  tankGrad.appendChild(el("stop", { offset:"0%", "stop-color":"#ffffff" }));
+  tankGrad.appendChild(el("stop", { offset:"20%", "stop-color":"#e0e8f0" }));
+  tankGrad.appendChild(el("stop", { offset:"80%", "stop-color":"#a0b0c0" }));
+  tankGrad.appendChild(el("stop", { offset:"100%", "stop-color":"#8090a0" }));
+  defs.appendChild(tankGrad);
+
+  return defs;
+}
+
+function renderMap(){
+  var b = APP.bounds;
+  var totalW = b.maxX - b.minX, totalH = b.maxY - b.minY;
+
+  APP.baseViewBox = { x:0, y:0, w:totalW, h:totalH };
+  APP.viewBox = { x:0, y:0, w:totalW, h:totalH };
+
+  APP.svg.innerHTML = "";
+  APP.svg.appendChild(buildDefs());
+
+  drawFields();
+  drawClearing();
+  drawFence();
+  
+  var roadsLayer = el("g", {}); drawRoads(roadsLayer); APP.svg.appendChild(roadsLayer);
+  
+  var waterLayer = el("g", {});
+  FARM.buildings.filter(function(x){ return x.group === "Водоёмы"; }).forEach(function(w){ drawWater(waterLayer, w); });
+  APP.svg.appendChild(waterLayer);
+
+  drawTrees();
+
+  var ambientGround = el("g", { id:"ambient-ground" });
+  APP.svg.appendChild(ambientGround);
+  
+  var buildingsLayer = el("g", {});
+  FARM.buildings.filter(function(x){ return x.group !== "Водоёмы"; }).forEach(function(building){ drawBuilding(buildingsLayer, building); });
+  APP.svg.appendChild(buildingsLayer);
+
+  TRUCK.dustLayer = el("g", { id:"dust-layer" });
+  APP.svg.appendChild(TRUCK.dustLayer);
+
+  var truckLayer = el("g", { id:"truck-layer" });
+  truckLayer.appendChild(buildTruckModel());
+  truckLayer.appendChild(buildTruckStatus());
+  APP.svg.appendChild(truckLayer);
+
+  var hoseLayer = el("g", { id:"hose-layer" });
+  TRUCK.hoseEl = el("path", { d:"", fill:"none", stroke:"#2a2a2a", "stroke-width":4, "stroke-linecap":"round", opacity:0 });
+  hoseLayer.appendChild(TRUCK.hoseEl);
+  APP.svg.appendChild(hoseLayer);
+
+  var skyLayer = el("g", { id:"sky-layer" });
+  APP.svg.appendChild(skyLayer);
+
+  var labelsLayer = el("g", { "pointer-events":"none" });
+  FARM.buildings.filter(function(x){
+    if(x.group === "Водоёмы" || !x.code) return false;
+    if(x.group === "Корпуса") return true;
+    if(x.group === "Служебные" && (x.code === "Офис" || x.code === "КПП Верх" || x.code === "КПП Низ")) return true;
+    return false;
+  }).forEach(function(building){
+    var bb = bboxOfCoords(building.coords);
+    var pt = toSvg((bb.minX+bb.maxX)/2, (bb.minY+bb.maxY)/2);
+    var offsetX = 0, offsetY = -12;
+    if (building.id === "KPPV") { offsetX = -12; offsetY = 16; }
+    if (building.id === "Ofis") { offsetX = 16; offsetY = -16; }
+    drawLabel(labelsLayer, pt[0] + offsetX, pt[1] + offsetY, building.code);
+  });
+  APP.svg.appendChild(labelsLayer);
+
+  drawMapLabels();
+  drawCompass();
+  
+  initAmbient();
+}
+
+function drawFields(){
+  var b = APP.bounds;
+  var layer = el("g", {});
+  layer.appendChild(el("rect", { x: b.minX - 2000, y: b.maxY + 2000, width: (b.maxX - b.minX) + 4000, height: (b.maxY - b.minY) + 4000, fill: "#7a9e44" }));
+  var rnd = makeRandom(1337), colors = ["#8aae50", "#6b8e3a", "#98b860", "#5a7a30", "#85a850", "#7c9c44"];
+  for(var i=0; i<200; i++){
+    var x = b.minX - 1500 + rnd() * (b.maxX - b.minX + 3000);
+    var y = b.minY - 1500 + rnd() * (b.maxY - b.minY + 3000);
+    var w = 200 + rnd() * 800, h = 200 + rnd() * 800;
+    var pt = toSvg(x, y + h);
+    layer.appendChild(el("path", { d: "M " + pt[0] + " " + pt[1] + " L " + (pt[0]+w) + " " + (pt[1]-h*0.2) + " L " + (pt[0]+w*0.8) + " " + (pt[1]-h) + " L " + (pt[0]+w*0.1) + " " + (pt[1]-h*0.8) + " Z", fill: colors[Math.floor(rnd()*colors.length)], opacity: 0.6 }));
+  }
+  APP.svg.appendChild(layer);
+}
+
+function drawClearing(){
+  var bb = APP.buildingBounds, pad = 40;
+  var p1 = toSvg(bb.minX - pad, bb.maxY + pad), p2 = toSvg(bb.maxX + pad, bb.maxY + pad), p3 = toSvg(bb.maxX + pad, bb.minY - pad), p4 = toSvg(bb.minX - pad, bb.minY - pad);
+  var d = "M " + p1[0] + " " + p1[1] + " L " + p2[0] + " " + p2[1] + " L " + p3[0] + " " + p3[1] + " L " + p4[0] + " " + p4[1] + " Z";
+  APP.svg.appendChild(el("path", { d: d, fill: STYLE.clearing, stroke: "#9a8a68", "stroke-width": 3, "stroke-linejoin": "round", opacity: 0.95 }));
+}
+
+function drawFence(){
+  var bb = APP.buildingBounds, pad = 20;
+  var s1 = toSvg(bb.minX-pad, bb.minY-pad), s2 = toSvg(bb.maxX+pad, bb.minY-pad), s3 = toSvg(bb.maxX+pad, bb.maxY+pad), s4 = toSvg(bb.minX-pad, bb.maxY+pad);
+  var d = "M " + s1[0] + " " + s1[1] + " L " + s2[0] + " " + s2[1] + " L " + s3[0] + " " + s3[1] + " L " + s4[0] + " " + s4[1] + " Z";
+  APP.svg.appendChild(el("path", { d:d, fill:"none", stroke:"#5a4a30", "stroke-width": 2, "stroke-dasharray":"8 5", opacity:0.5 }));
+}
+
+function drawRoads(layer){
+  var dirtRoads = ROADS.filter(function(r) { return r.kind !== "highway"; });
+  dirtRoads.forEach(function(r){ layer.appendChild(el("path", { d:pathFromCoords(r.pts, false), fill:"none", stroke: STYLE.roadBorder, "stroke-width": r.w + 4, "stroke-linecap":"round", "stroke-linejoin":"round" })); });
+  dirtRoads.forEach(function(r){ layer.appendChild(el("path", { d:pathFromCoords(r.pts, false), fill:"none", stroke: "url(#gravel-pattern)", "stroke-width": r.w, "stroke-linecap":"round", "stroke-linejoin":"round" })); });
+  dirtRoads.forEach(function(r){ if(r.w >= 6){ layer.appendChild(el("path", { d:pathFromCoords(r.pts, false), fill:"none", stroke: STYLE.roadLine, "stroke-width": 1.5, "stroke-dasharray": "6 8", "stroke-linecap":"round" })); } });
+}
+
+function drawWater(layer, w){
+  var isLaguna = w.id.indexOf("Laguna") === 0, d = pathFromCoords(w.coords, true);
+  if(isLaguna){
+    layer.appendChild(el("path", { d:d, fill:STYLE.laguna, stroke:STYLE.lagunaBorder, "stroke-width":3 }));
+    layer.appendChild(el("path", { d:d, fill:"none", stroke:"#9a8a68", "stroke-width":8, opacity:0.6, "stroke-linejoin":"round" }));
+  } else {
+    layer.appendChild(el("path", { d:d, fill:"url(#pond-grad)", stroke:STYLE.waterBorder, "stroke-width":3 }));
+  }
+}
+
+function drawTrees(){
+  var layer = el("g", {}), rnd = makeRandom(101), bb = APP.buildingBounds;
+  var patches = [
+    { x: bb.minX - 1500, y: bb.minY - 1000, w: 800, h: 1500 },
+    { x: bb.maxX + 500, y: bb.minY - 1000, w: 800, h: 1500 },
+    { x: bb.minX - 1000, y: bb.maxY + 500, w: 2500, h: 600 },
+    { x: bb.minX - 1000, y: bb.minY - 1500, w: 2500, h: 600 }
+  ];
+  patches.forEach(function(patch) {
+    for(var i=0; i<150; i++) {
+      var tx = patch.x + rnd() * patch.w;
+      var ty = patch.y + rnd() * patch.h;
+      var pt = toSvg(tx, ty), size = 6 + rnd() * 8;
+      layer.appendChild(el("circle", { cx: pt[0]+2, cy: pt[1]+2, r: size, fill: "#000", opacity: 0.2 }));
+      layer.appendChild(el("circle", { cx: pt[0], cy: pt[1], r: size, fill: "#3d6a26" }));
+      layer.appendChild(el("circle", { cx: pt[0]-size*0.3, cy: pt[1]-size*0.3, r: size*0.7, fill: "#5a8e3a" }));
+    }
+  });
+  APP.svg.appendChild(layer);
+}
+
+function drawBuilding(layer, building){
+  var palette = COLORS_BY_GROUP[building.group] || COLORS_BY_GROUP["Корпуса"];
+  var pts = building.coords.map(function(c){ return toSvg(c[0], c[1]); });
+  var minY = Infinity, maxY = -Infinity;
+  pts.forEach(function(p){ if(p[1] < minY) minY = p[1]; if(p[1] > maxY) maxY = p[1]; });
+  var wallHeight = Math.max(10, Math.min(25, (maxY - minY) * 0.4));
+
+  var g = el("g", { "class":"building-group", "data-id": building.id });
+  g.setAttribute("filter", "url(#soft-shadow)");
+
+  var shadowD = "";
+  pts.forEach(function(p, i){ shadowD += (i===0 ? "M " : "L ") + (p[0] + 5) + " " + (p[1] + wallHeight + 5); });
+  shadowD += " Z";
+  g.appendChild(el("path", { d: shadowD, fill: "#000", opacity: 0.15 }));
+
+  var wallD = "";
+  pts.forEach(function(p, i){ var isBottom = p[1] > (minY + maxY) / 2; wallD += (i===0 ? "M " : "L ") + p[0] + " " + (isBottom ? p[1] + wallHeight : p[1]); });
+  wallD += " Z";
+  g.appendChild(el("path", { d: wallD, fill: palette.fill, stroke: palette.stroke, "stroke-width": 1 }));
+
+  var roofD = "";
+  pts.forEach(function(p, i){ roofD += (i===0 ? "M " : "L ") + (p[0] + 1) + " " + (p[1] - 4); });
+  roofD += " Z";
+  
+  g.appendChild(el("path", { d: roofD, fill: "url(#roof-pattern)", stroke: palette.stroke, "stroke-width": 1.5, "stroke-linejoin": "round" }));
+  g.appendChild(el("path", { d: roofD, fill: palette.roof, opacity: 0.4, "pointer-events": "none" }));
+
+  if(building.coords.length === 4){
+    var mid1 = toSvg((building.coords[0][0]+building.coords[1][0])/2, (building.coords[0][1]+building.coords[1][1])/2);
+    var mid2 = toSvg((building.coords[2][0]+building.coords[3][0])/2, (building.coords[2][1]+building.coords[3][1])/2);
+    g.appendChild(el("line", { x1: mid1[0]+1, y1: mid1[1]-4, x2: mid2[0]+1, y2: mid2[1]-4, stroke: palette.roofLine, "stroke-width": 2, opacity: 0.6 }));
+  }
+
+  g.addEventListener("click", function(ev){ ev.stopPropagation(); openCard(building); highlightBuilding(g); });
+  layer.appendChild(g);
+}
+
+function drawLabel(layer, x, y, text){
+  var w = Math.max(22, text.length * 7 + 12), h = 18;
+  layer.appendChild(el("rect", { x: x-w/2, y: y-h/2, width: w, height: h, rx: h/2, fill: STYLE.labelBg, stroke: STYLE.label, "stroke-width": 1.5, opacity:0.95 }));
+  var t = el("text", { x:x, y:y+1, "text-anchor":"middle", "dominant-baseline":"middle", "font-family":"sans-serif", "font-size":"11", "font-weight":"bold", "fill": STYLE.label });
+  t.textContent = text; layer.appendChild(t);
+}
+
+function drawMapLabels(){
+  var b = APP.bounds, totalW = b.maxX - b.minX, totalH = b.maxY - b.minY;
+  var layer = el("g", { "pointer-events": "none" });
+
+  var titleX = totalW * 0.85, titleY = totalH * 0.1;
+  var titleGroup = el("g", { transform: "translate(" + titleX + ", " + titleY + ")" });
+  var titleText = el("text", { x: 0, y: 0, "text-anchor": "middle", "font-family": "Georgia, serif", "font-size": "42px", "font-weight": "bold", fill: "#ffffff", stroke: "#1f3d10", "stroke-width": "3px", "paint-order": "stroke fill", "letter-spacing": "4px" });
+  titleText.textContent = "ФЕРМА «АГРОАЛЬЯНС ИНВЕСТ»"; titleGroup.appendChild(titleText);
+  var subTitle = el("text", { x: 0, y: 45, "text-anchor": "middle", "font-family": "Arial, sans-serif", "font-size": "18px", "font-weight": "bold", fill: "#ffffff", stroke: "#1f3d10", "stroke-width": "2px", "paint-order": "stroke fill", "letter-spacing": "8px" });
+  subTitle.textContent = "АГРОПРОМЫШЛЕННЫЙ КОМПЛЕКС"; titleGroup.appendChild(subTitle);
+  titleGroup.appendChild(el("line", { x1: -220, y1: 20, x2: 220, y2: 20, stroke: "#ffffff", "stroke-width": 3, opacity: 0.9 }));
+  layer.appendChild(titleGroup);
+
+  var districtX = totalW * 0.15, districtY = totalH * 0.88;
+  var districtGroup = el("g", { transform: "translate(" + districtX + ", " + districtY + ")" });
+  var distText = el("text", { x: 0, y: 0, "text-anchor": "middle", "font-family": "Arial, sans-serif", "font-size": "28px", "font-weight": "bold", fill: "#ffffff", stroke: "#1f3d10", "stroke-width": "3px", "paint-order": "stroke fill", "letter-spacing": "12px" });
+  distText.textContent = "АЛЕКСАНДРОВСКИЙ РАЙОН"; districtGroup.appendChild(distText);
+  districtGroup.appendChild(el("rect", { x: -240, y: -25, width: 480, height: 50, fill: "none", stroke: "#ffffff", "stroke-width": 2, opacity: 0.8, rx: 6 }));
+  layer.appendChild(districtGroup);
+
+  APP.svg.appendChild(layer);
+}
+
+function drawCompass(){
+  var g = el("g", { transform: "translate(80, 80)" });
+  g.appendChild(el("circle", { cx:0, cy:0, r:30, fill:"#fff", opacity:0.9, stroke:"#4a8a3a", "stroke-width":3 }));
+  g.appendChild(el("path", { d:"M 0 -22 L 6 0 L 0 6 L -6 0 Z", fill:"#e05a3a" }));
+  g.appendChild(el("path", { d:"M 0 22 L 6 0 L 0 -6 L -6 0 Z", fill:"#6b7a68" }));
+  var text = el("text", { x:0, y:-36, "text-anchor":"middle", "font-weight":"bold", "font-size":"14", fill:"#1f2d1c" });
+  text.textContent = "С"; g.appendChild(text);
+  APP.svg.appendChild(g);
+}
+
+/* ============================================================
+   ФОНОВЫЕ АНИМАЦИИ
+   ============================================================ */
+function buildCow() {
+  var g = el("g", {});
+  g.appendChild(el("ellipse", { cx:0, cy:1.5, rx:9, ry:4.5, fill:"#000", opacity:"0.2" })); 
+  
+  var body = el("g", { "class": "cow-body" }); 
+  
+  // Ноги
+  body.appendChild(el("rect", { x:-6, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
+  body.appendChild(el("rect", { x:-3, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
+  body.appendChild(el("rect", { x:2, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
+  body.appendChild(el("rect", { x:5, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
+  
+  // Тело
+  body.appendChild(el("ellipse", { cx:0, cy:0, rx:8, ry:4.5, fill:"#f8f8f8", stroke:"#333", "stroke-width":1 }));
+  
+  // Пятна
+  body.appendChild(el("path", { d:"M -5,-2 Q -2,-4 1,-1 Q -1,2 -4,2 Z", fill:"#222" }));
+  body.appendChild(el("ellipse", { cx:3, cy:1.5, rx:2.5, ry:1.5, fill:"#222" }));
+  
+  // Хвост
+  body.appendChild(el("path", { d:"M -8,0 Q -11,-1 -12,3", fill:"none", stroke:"#333", "stroke-width":1, "stroke-linecap":"round" }));
+  
+  // Голова
+  body.appendChild(el("ellipse", { cx:7, cy:-1, rx:4, ry:3, fill:"#f8f8f8", stroke:"#333", "stroke-width":1 }));
+  
+  // Мордочка
+  body.appendChild(el("ellipse", { cx:9, cy:-1, rx:2, ry:1.8, fill:"#f0a0a0", stroke:"#c06060", "stroke-width":0.5 }));
+  
+  // Глаз
+  body.appendChild(el("circle", { cx:6, cy:-2, r:0.8, fill:"#111" }));
+  
+  // Уши / Рога
+  body.appendChild(el("path", { d:"M 5,-3 L 3,-5 L 6,-5 Z", fill:"#c08060", stroke:"#333", "stroke-width":0.5 }));
+  body.appendChild(el("path", { d:"M 8,-3 L 10,-5 L 10,-3 Z", fill:"#c08060", stroke:"#333", "stroke-width":0.5 }));
+  
+  g.appendChild(body);
+  return { el: g, body: body };
+}
+
+function buildTractor() {
+  var g = el("g", {});
+  g.appendChild(el("ellipse", { cx:0, cy:0, rx:14, ry:8, fill:"#000", opacity:"0.25" })); 
+  
+  var body = el("g", {});
+  body.appendChild(el("rect", { x:-16, y:-4, width:6, height:8, fill:"#555", stroke:"#333", "stroke-width":1 }));
+  body.appendChild(el("line", { x1:-10, y1:0, x2:-8, y2:0, stroke:"#333", "stroke-width":1.5 }));
+  body.appendChild(el("rect", { x:-8, y:-5, width:14, height:10, fill:"#2e8b57", rx:1.5, stroke:"#1a5e35", "stroke-width":0.8 }));
+  body.appendChild(el("rect", { x:-2, y:-4, width:5, height:8, fill:"#2a2a2a", rx:1 }));
+  body.appendChild(el("rect", { x:-1, y:-3, width:3, height:6, fill:"#9fd8f0" }));
+  body.appendChild(el("rect", { x:1, y:-6, width:1, height:2, fill:"#333" }));
+  body.appendChild(el("rect", { x:-9, y:-7, width:5, height:3, rx:1, fill:"#111" }));
+  body.appendChild(el("rect", { x:-9, y:4, width:5, height:3, rx:1, fill:"#111" }));
+  body.appendChild(el("rect", { x:4, y:-6, width:3, height:2.5, rx:1, fill:"#111" }));
+  body.appendChild(el("rect", { x:4, y:3.5, width:3, height:2.5, rx:1, fill:"#111" }));
+  
+  g.appendChild(body);
+  return { el: g, body: body };
+}
+
+function buildWorker() {
+  var g = el("g", {});
+  g.appendChild(el("ellipse", { cx:0, cy:1.5, rx:4, ry:2, fill:"#000", opacity:"0.3" })); 
+  
+  var body = el("g", { "class": "worker-body" });
+  body.appendChild(el("rect", { x:-3, y:-4, width:6, height:7, rx:1.5, fill:"#ff8c00", stroke:"#a04000", "stroke-width":0.5 }));
+  body.appendChild(el("line", { x1:-3, y1:-2, x2:3, y2:-2, stroke:"#e0e0e0", "stroke-width":1 }));
+  body.appendChild(el("line", { x1:-3, y1:0, x2:3, y2:0, stroke:"#e0e0e0", "stroke-width":1 }));
+  body.appendChild(el("rect", { x:-4, y:-3, width:1.5, height:4, rx:0.5, fill:"#2a5caa" }));
+  body.appendChild(el("rect", { x:2.5, y:-3, width:1.5, height:4, rx:0.5, fill:"#2a5caa" }));
+  body.appendChild(el("circle", { cx:0, cy:-5, r:2.5, fill:"#fcdbb5", stroke:"#d0a080", "stroke-width":0.5 }));
+  body.appendChild(el("path", { d:"M -2.5,-5.5 A 2.5,2.5 0 0,1 2.5,-5.5 Z", fill:"#f0c030", stroke:"#a08010", "stroke-width":0.5 }));
+  body.appendChild(el("ellipse", { cx:-0.5, cy:-6, rx:1, ry:0.5, fill:"#ffffff", opacity:0.5 }));
+  
+  g.appendChild(body);
+  return { el: g, body: body };
+}
+
+function buildAirplane() {
+  var g = el("g", {});
+  
+  var shadow = el("g", { transform: "translate(40, 60)", opacity: 0.2 });
+  shadow.appendChild(el("path", { d:"M-8,-40 L8,-40 L8,40 L-8,40 Z", fill:"#000" }));
+  shadow.appendChild(el("path", { d:"M-10,0 L-70,25 L-70,35 L-10,15 Z", fill:"#000" }));
+  shadow.appendChild(el("path", { d:"M10,0 L70,25 L70,35 L10,15 Z", fill:"#000" }));
+  shadow.appendChild(el("path", { d:"M-15,30 L-30,45 L-30,48 L-15,40 Z", fill:"#000" }));
+  shadow.appendChild(el("path", { d:"M15,30 L30,45 L30,48 L15,40 Z", fill:"#000" }));
+  g.appendChild(shadow);
+
+  var body = el("g", {});
+  
+  body.appendChild(el("path", { d:"M -8,5 L -70,30 L -70,38 L -8,18 Z", fill:"#e0e8f0", stroke:"#7a8a98", "stroke-width":1 }));
+  body.appendChild(el("path", { d:"M 8,5 L 70,30 L 70,38 L 8,18 Z", fill:"#e0e8f0", stroke:"#7a8a98", "stroke-width":1 }));
+  
+  body.appendChild(el("ellipse", { cx:-30, cy:22, rx:5, ry:12, fill:"#9aa8b4", stroke:"#5a6a7a", "stroke-width":1 }));
+  body.appendChild(el("ellipse", { cx:30, cy:22, rx:5, ry:12, fill:"#9aa8b4", stroke:"#5a6a7a", "stroke-width":1 }));
+  
+  body.appendChild(el("path", { d:"M -5,30 L -30,45 L -30,48 L -5,40 Z", fill:"#e0e8f0", stroke:"#7a8a98", "stroke-width":1 }));
+  body.appendChild(el("path", { d:"M 5,30 L 30,45 L 30,48 L 5,40 Z", fill:"#e0e8f0", stroke:"#7a8a98", "stroke-width":1 }));
+  
+  body.appendChild(el("path", { d:"M -2,32 L 2,32 L 2,50 L -2,50 Z", fill:"#e05a3a", stroke:"#7a2010", "stroke-width":1 }));
+  
+  body.appendChild(el("path", { d:"M -8,-40 Q 0,-48 8,-40 L 8,40 Q 0,48 -8,40 Z", fill:"#ffffff", stroke:"#7a8a98", "stroke-width":1 }));
+  
+  body.appendChild(el("path", { d:"M -8,15 L 8,15 L 8,20 L -8,20 Z", fill:"#2a5caa" }));
+  
+  for (var i = -15; i <= 25; i += 5) {
+    if (i > 5 || i < -5) {
+      body.appendChild(el("circle", { cx:-4, cy:i, r:1, fill:"#4a5a6a" }));
+      body.appendChild(el("circle", { cx:4, cy:i, r:1, fill:"#4a5a6a" }));
+    }
+  }
+
+  body.appendChild(el("path", { d:"M -6,-36 Q 0,-42 6,-36 L 6,-30 L -6,-30 Z", fill:"#4a5a6a" }));
+  
+  g.appendChild(body);
+  return g;
+}
+
+function createPathData(pathPoints) {
+  var pts = pathPoints.map(function(p){ return toSvg(p.x, p.y); });
+  var segs = [], total = 0;
+  for (var i = 1; i < pts.length; i++) {
+    var dx = pts[i][0] - pts[i-1][0], dy = pts[i][1] - pts[i-1][1], len = Math.sqrt(dx*dx + dy*dy);
+    segs.push({ x1: pts[i-1][0], y1: pts[i-1][1], x2: pts[i][0], y2: pts[i][1], len: len, start: total });
+    total += len;
+  }
+  return { segs: segs, total: total };
+}
+
+function getPointOnPath(pathData, d) {
+  if (pathData.segs.length === 0) return { x:0, y:0, angle:0 };
+  if (d <= 0) { var s = pathData.segs[0]; return { x: s.x1, y: s.y1, angle: Math.atan2(s.y2-s.y1, s.x2-s.x1)*180/Math.PI }; }
+  for (var i=0; i<pathData.segs.length; i++) {
+    var s = pathData.segs[i];
+    if (d <= s.start + s.len) {
+      var t = s.len > 0 ? (d - s.start) / s.len : 0;
+      return { x: s.x1 + (s.x2-s.x1)*t, y: s.y1 + (s.y2-s.y1)*t, angle: Math.atan2(s.y2-s.y1, s.x2-s.x1)*180/Math.PI };
+    }
+  }
+  var last = pathData.segs[pathData.segs.length-1];
+  return { x: last.x2, y: last.y2, angle: Math.atan2(last.y2-last.y1, last.x2-last.x1)*180/Math.PI };
+}
+
+function getTrailPath(pathData, dist) {
+  if (dist <= 0) return "";
+  var d = "M " + pathData.segs[0].x1 + " " + pathData.segs[0].y1;
+  for (var i = 0; i < pathData.segs.length; i++) {
+    var s = pathData.segs[i];
+    if (dist >= s.start + s.len) {
+      d += " L " + s.x2 + " " + s.y2;
+    } else {
+      var t = (dist - s.start) / s.len;
+      d += " L " + (s.x1 + (s.x2 - s.x1) * t) + " " + (s.y1 + (s.y2 - s.y1) * t);
+      break;
+    }
+  }
+  return d;
+}
+
+function initAmbient() {
+  var groundLayer = document.getElementById("ambient-ground");
+  var skyLayer = document.getElementById("sky-layer");
+  var rnd = makeRandom(42);
+  
+  // --- ЛЕВОЕ СТАДО (10 КОРОВ, ПАСУТСЯ РАЗНОБОЙ) ---
+  var cowBaseX = 1400550, cowBaseY = 458250;
+  for (var i=0; i<10; i++) {
+    var c = buildCow();
+    // Разбрасываем в радиусе 120 пикселей
+    var posX = cowBaseX + (rnd() - 0.5) * 120;
+    var posY = cowBaseY + (rnd() - 0.5) * 120;
+    var pt = toSvg(posX, posY);
+    var angle = rnd() * 360;
+    
+    c.el.setAttribute("transform", "translate(" + pt[0] + "," + pt[1] + ")");
+    c.body.setAttribute("transform", "rotate(" + angle + ")");
+    
+    if (i % 2 === 0) c.body.classList.add("delay");
+    if (i % 3 === 0) c.body.classList.add("delay2");
+    groundLayer.appendChild(c.el);
+  }
+
+
+
+  // --- ТРАКТОРЫ ---
+  var tractorPath1 = createPathData([{x:1400400, y:457600}, {x:1400400, y:457200}, {x:1400700, y:457200}, {x:1400700, y:457600}, {x:1400400, y:457600}]);
+  var tr1 = buildTractor();
+  AMBIENT.tractors.push({ el: tr1.el, body: tr1.body, path: tractorPath1, dist: 0, speed: 20, trailEl: el("path", { fill:"none", stroke:"#5a4a30", "stroke-width":3, opacity:0.4 }) });
+  groundLayer.appendChild(AMBIENT.tractors[0].trailEl);
+  groundLayer.appendChild(tr1.el);
+
+  var tractorPath2 = createPathData([{x:1401600, y:457600}, {x:1401600, y:457900}, {x:1402100, y:457900}, {x:1402100, y:457600}, {x:1401600, y:457600}]);
+  var tr2 = buildTractor();
+  AMBIENT.tractors.push({ el: tr2.el, body: tr2.body, path: tractorPath2, dist: 0, speed: 18, trailEl: el("path", { fill:"none", stroke:"#5a4a30", "stroke-width":3, opacity:0.4 }) });
+  groundLayer.appendChild(AMBIENT.tractors[1].trailEl);
+  groundLayer.appendChild(tr2.el);
+
+  // --- РАБОЧИЕ ---
+  var wPaths = [
+    createPathData([{x:1401120, y:458280}, {x:1401150, y:458280}, {x:1401150, y:458250}]),
+    createPathData([{x:1401000, y:458010}, {x:1400900, y:458010}, {x:1400840, y:458040}]),
+    createPathData([{x:1401140, y:458200}, {x:1401140, y:458100}, {x:1401160, y:458100}]),
+    createPathData([{x:1400900, y:458150}, {x:1400930, y:458150}, {x:1400930, y:458200}]),
+    createPathData([{x:1400800, y:458300}, {x:1400800, y:458400}, {x:1400850, y:458400}])
+  ];
+  wPaths.forEach(function(path, i) {
+    var w = buildWorker();
+    AMBIENT.workers.push({ el: w.el, body: w.body, path: path, dist: Math.random() * 20, speed: 10 + Math.random()*5, dir: 1, pause: 0 });
+    groundLayer.appendChild(w.el);
+  });
+
+  // --- САМОЛЕТ ---
+  var plane = buildAirplane();
+  skyLayer.appendChild(plane);
+  AMBIENT.airplane = {
+    el: plane,
+    x: APP.baseViewBox.w * 0.3,
+    y: APP.baseViewBox.h + 300,
+    speed: 150,
+    active: true,
+    delay: 2
+  };
+}
+
+function ambientLoop(ts) {
+  if (!AMBIENT.lastTs) AMBIENT.lastTs = ts;
+  var dt = (ts - AMBIENT.lastTs) / 1000;
+  AMBIENT.lastTs = ts;
+  if (dt > 0.1) dt = 0.1;
+
+  // Коровы (правое стадо)
+  AMBIENT.cows.forEach(function(c) {
+    c.dist += c.speed * dt;
+    if (c.dist > c.path.total) c.dist -= c.path.total;
+    var p = getPointOnPath(c.path, c.dist);
+    
+    c.el.setAttribute("transform", "translate(" + p.x + "," + p.y + ")");
+    // Смещение вбок (offset) вместе с поворотом
+    c.body.setAttribute("transform", "rotate(" + p.angle + ") translate(" + c.offset + ", 0)");
+  });
+
+  // Тракторы
+  AMBIENT.tractors.forEach(function(tr) {
+    tr.dist += tr.speed * dt;
+    if (tr.dist > tr.path.total) tr.dist = 0;
+    var p = getPointOnPath(tr.path, tr.dist);
+    tr.el.setAttribute("transform", "translate(" + p.x + "," + p.y + ")");
+    tr.body.setAttribute("transform", "rotate(" + p.angle + ")");
+    tr.trailEl.setAttribute("d", getTrailPath(tr.path, tr.dist));
+  });
+
+  // Рабочие
+  AMBIENT.workers.forEach(function(w) {
+    if (w.pause > 0) { w.pause -= dt; return; }
+    w.dist += w.speed * dt * w.dir;
+    if (w.dist > w.path.total) { w.dist = w.path.total; w.dir = -1; w.pause = 2; }
+    if (w.dist < 0) { w.dist = 0; w.dir = 1; w.pause = 2; }
+    var p = getPointOnPath(w.path, w.dist);
+    var angle = p.angle + (w.dir === -1 ? 180 : 0);
+    w.el.setAttribute("transform", "translate(" + p.x + "," + p.y + ")");
+    w.body.setAttribute("transform", "rotate(" + angle + ")");
+  });
+
+  // САМОЛЕТ (Летит снизу вверх)
+  if (AMBIENT.airplane) {
+    var a = AMBIENT.airplane;
+    if (a.active) {
+      a.y -= a.speed * dt;
+      a.el.setAttribute("transform", "translate(" + a.x + ", " + a.y + ")");
+      
+      if (a.y < -300) {
+        a.active = false;
+        a.y = APP.baseViewBox.h + 300;
+        a.x = APP.baseViewBox.w * 0.1 + Math.random() * APP.baseViewBox.w * 0.8;
+        a.el.setAttribute("opacity", 0);
+      }
+    } else {
+      a.delay -= dt;
+      if (a.delay <= 0) {
+        a.active = true;
+        a.el.setAttribute("opacity", 1);
+        a.delay = 15 + Math.random() * 10;
+      }
+    }
+  }
+
+  AMBIENT.rafId = requestAnimationFrame(ambientLoop);
+}
+
+/* ============================================================
+   АНИМАЦИЯ МОЛОКОВОЗА
+   ============================================================ */
+function buildTruckModel(){
+  var g = el("g", { id:"truck" });
+  g.appendChild(el("ellipse", { cx:0, cy:3, rx:17, ry:9, fill:"#000", opacity:"0.25" }));
+  var wheels = [[-9,-6.5],[-9,4.5],[6,-6.5],[6,4.5]];
+  wheels.forEach(function(p){ g.appendChild(el("rect", { x:p[0], y:p[1], width:6, height:2, rx:1, fill:"#1a1a1a" })); });
+  
+  g.appendChild(el("rect", { x:-14, y:-5, width:19, height:10, rx:5, fill:"url(#tank-grad)", stroke:"#5a6a7a", "stroke-width":0.8 }));
+  g.appendChild(el("rect", { x:-13, y:-3, width:17, height:6, rx:3, fill:"#b6c8d4", opacity:0.6 }));
+  var milk = el("rect", { x:-13, y:-3, width:0, height:6, rx:3, fill:"#ffffff", opacity:0 });
+  g.appendChild(milk); TRUCK.milkEl = milk;
+  g.appendChild(el("rect", { x:-13, y:-3, width:17, height:6, rx:3, fill:"none", stroke:"#4a5a6a", "stroke-width":0.5 }));
+  g.appendChild(el("rect", { x:5, y:-4.5, width:10, height:9, rx:2, fill:"#d94a2a", stroke:"#7a2010", "stroke-width":0.8 }));
+  g.appendChild(el("rect", { x:6, y:-3.5, width:6, height:7, rx:1, fill:"#f07a5a", opacity:0.5 }));
+  g.appendChild(el("path", { d:"M 12,-3.5 Q 14,-3.5 14,0 Q 14,3.5 12,3.5 L 11.5,3.5 L 11.5,-3.5 Z", fill:"#9fd8f0", stroke:"#4a8098", "stroke-width":0.5 }));
+  g.appendChild(el("rect", { x:11, y:-6, width:1.5, height:2, rx:0.5, fill:"#333" }));
+  g.appendChild(el("rect", { x:11, y:4, width:1.5, height:2, rx:0.5, fill:"#333" }));
+  
+  TRUCK.hazardL = el("circle", { cx:7, cy:-2.5, r:1.5, fill:"#ffaa00", class:"hazard-light", opacity:0 });
+  TRUCK.hazardR = el("circle", { cx:7, cy:2.5, r:1.5, fill:"#ffaa00", class:"hazard-light", opacity:0 });
+  g.appendChild(TRUCK.hazardL);
+  g.appendChild(TRUCK.hazardR);
+
+  TRUCK.el = g; return g;
+}
+
+function buildTruckStatus(){
+  var g = el("g", { opacity:0 });
+  g.appendChild(el("rect", { x:-30, y:-8, width:60, height:16, rx:8, fill:"#ffffff", stroke:"#4a8a3a", "stroke-width":1.5, opacity:0.95 }));
+  var t = el("text", { x:0, y:1, "text-anchor":"middle", "dominant-baseline":"middle", "font-family":"sans-serif", "font-size":"8", "font-weight":"bold", "fill":"#1f2d1c" });
+  t.textContent = "Загрузка..."; g.appendChild(t);
+  TRUCK.statusEl = g; return g;
+}
+
+function buildTruckRoute(){
+  TRUCK.pts = FARM.truckRoute.points.map(function(p){ var s = toSvg(p.x, p.y); return { x:s[0], y:s[1], action:p.action || null }; });
+  TRUCK.segs = []; TRUCK.total = 0; TRUCK.loadDist = 0;
+  for(var i=1;i<TRUCK.pts.length;i++){
+    var a = TRUCK.pts[i-1], b = TRUCK.pts[i], dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx*dx + dy*dy);
+    TRUCK.segs.push({ x1:a.x, y1:a.y, x2:b.x, y2:b.y, len:len, start:TRUCK.total });
+    TRUCK.total += len;
+    if(b.action === "load") TRUCK.loadDist = TRUCK.total;
+  }
+}
+
+function truckPointAt(d){
+  if(TRUCK.segs.length === 0) return { x:0, y:0, angle:0 };
+  if(d <= 0){ var s0 = TRUCK.segs[0]; return { x:s0.x1, y:s0.y1, angle: Math.atan2(s0.y2 - s0.y1, s0.x2 - s0.x1) * 180 / Math.PI }; }
+  for(var i=0;i<TRUCK.segs.length;i++){
+    var s = TRUCK.segs[i];
+    if(d <= s.start + s.len){
+      var t = s.len > 0 ? (d - s.start) / s.len : 0;
+      return { x: s.x1 + (s.x2 - s.x1) * t, y: s.y1 + (s.y2 - s.y1) * t, angle: Math.atan2(s.y2 - s.y1, s.x2 - s.x1) * 180 / Math.PI };
+    }
+  }
+  var last = TRUCK.segs[TRUCK.segs.length - 1];
+  return { x:last.x2, y:last.y2, angle: Math.atan2(last.y2 - last.y1, last.x2 - last.x1) * 180 / Math.PI };
+}
+
+function angleLerp(a, b, t){ var d = b - a; while(d > 180) d -= 360; while(d < -180) d += 360; return a + d * t; }
+
+function spawnDust(x, y) {
+  if (!TRUCK.dustLayer) return;
+  var size = 2 + Math.random() * 3;
+  var dust = el("circle", { cx: x, cy: y, r: size, fill: "#c8b888", class: "dust-particle" });
+  TRUCK.dustLayer.appendChild(dust);
+  setTimeout(function() { if (dust.parentNode) dust.parentNode.removeChild(dust); }, 1000);
+}
+
+function truckUpdate(dt){
+  if(TRUCK.state === "moving"){
+    TRUCK.dist += FARM.truckRoute.speed * dt;
+    TRUCK.dustTimer += dt;
+    if (TRUCK.dustTimer > 0.1) {
+      TRUCK.dustTimer = 0;
+      var p = truckPointAt(TRUCK.dist - 15);
+      spawnDust(p.x, p.y);
+    }
+
+    if(!TRUCK.loaded && TRUCK.loadDist > 0 && TRUCK.dist >= TRUCK.loadDist){ TRUCK.dist = TRUCK.loadDist; TRUCK.loadTimer = 0; setTruckState("loading"); }
+    else if(TRUCK.dist >= TRUCK.total){ TRUCK.dist = TRUCK.total; TRUCK.loaded = true; setTruckState("completed"); }
+  } else if(TRUCK.state === "loading"){
+    TRUCK.loadTimer += dt;
+    if(TRUCK.loadTimer >= FARM.truckRoute.loadDuration){ TRUCK.loadTimer = FARM.truckRoute.loadDuration; TRUCK.loaded = true; setTruckState("moving"); }
+  }
+}
+
+function truckRender(instant){
+  if(!TRUCK.el) return;
+  var p = truckPointAt(TRUCK.dist);
+  TRUCK.angle = instant ? p.angle : angleLerp(TRUCK.angle, p.angle, 0.20);
+  
+  var bounceY = 0;
+  if (TRUCK.state === "moving") {
+    TRUCK.bouncePhase += 0.2;
+    bounceY = Math.sin(TRUCK.bouncePhase) * 1.2;
+  }
+
+  TRUCK.el.setAttribute("transform", "translate(" + p.x.toFixed(2) + "," + (p.y + bounceY).toFixed(2) + ") rotate(" + TRUCK.angle.toFixed(2) + ")");
+  
+  if(TRUCK.milkEl){
+    var prog = TRUCK.state === "loading" ? Math.min(1, TRUCK.loadTimer / FARM.truckRoute.loadDuration) : (TRUCK.loaded ? 1 : 0);
+    var w = 17 * prog;
+    TRUCK.milkEl.setAttribute("width", w.toFixed(2));
+    TRUCK.milkEl.setAttribute("rx", Math.min(3, w/2).toFixed(2));
+    TRUCK.milkEl.setAttribute("opacity", prog > 0.02 ? 1 : 0);
+  }
+  
+  if(TRUCK.statusEl){
+    var show = (TRUCK.state === "loading");
+    TRUCK.statusEl.setAttribute("opacity", show ? 1 : 0);
+    if(show) TRUCK.statusEl.setAttribute("transform", "translate(" + p.x.toFixed(2) + "," + (p.y - 20 + bounceY).toFixed(2) + ")");
+  }
+
+  if (TRUCK.hazardL && TRUCK.hazardR) {
+    var showHazards = (TRUCK.state === "loading" || TRUCK.state === "paused");
+    TRUCK.hazardL.setAttribute("opacity", showHazards ? 1 : 0);
+    TRUCK.hazardR.setAttribute("opacity", showHazards ? 1 : 0);
+  }
+
+  if (TRUCK.hoseEl) {
+    if (TRUCK.state === "loading") {
+      var dmbPt = toSvg(1400960, 458100); 
+      var truckPt = p;
+      TRUCK.hoseEl.setAttribute("d", "M " + dmbPt[0] + " " + dmbPt[1] + " Q " + ((dmbPt[0]+truckPt.x)/2) + " " + (dmbPt[1]-15) + " " + truckPt.x + " " + truckPt.y);
+      TRUCK.hoseEl.setAttribute("opacity", 1);
+    } else {
+      TRUCK.hoseEl.setAttribute("opacity", 0);
+    }
+  }
+}
+
+function truckLoop(ts){
+  if(!TRUCK.lastTs) TRUCK.lastTs = ts;
+  var dt = (ts - TRUCK.lastTs) / 1000; TRUCK.lastTs = ts;
+  if(dt > 0.1) dt = 0.1; if(dt < 0) dt = 0;
+  truckUpdate(dt); truckRender(false);
+  if(TRUCK.state === "moving" || TRUCK.state === "loading") TRUCK.rafId = requestAnimationFrame(truckLoop);
+  else { TRUCK.rafId = null; updateAnimButtons(); }
+}
+
+function setTruckState(s){ if(TRUCK.state === s) return; TRUCK.state = s; updateAnimButtons(); }
+
+function truckPlay(){
+  if(TRUCK.state === "completed") truckReset();
+  if(TRUCK.state === "idle") TRUCK.state = "moving";
+  else if(TRUCK.state === "paused") { TRUCK.state = TRUCK.prevState || "moving"; TRUCK.prevState = null; }
+  else { updateAnimButtons(); return; }
+  TRUCK.lastTs = 0; if(!TRUCK.rafId) TRUCK.rafId = requestAnimationFrame(truckLoop); updateAnimButtons();
+}
+
+function truckPause(){
+  if(TRUCK.state === "moving" || TRUCK.state === "loading"){
+    TRUCK.prevState = TRUCK.state; TRUCK.state = "paused";
+    if(TRUCK.rafId){ cancelAnimationFrame(TRUCK.rafId); TRUCK.rafId = null; }
+    updateAnimButtons();
+  }
+}
+
+function truckReset(){
+  if(TRUCK.rafId){ cancelAnimationFrame(TRUCK.rafId); TRUCK.rafId = null; }
+  TRUCK.dist = 0; TRUCK.state = "idle"; TRUCK.prevState = null; TRUCK.loadTimer = 0; TRUCK.loaded = false; TRUCK.lastTs = 0;
+  if (TRUCK.dustLayer) TRUCK.dustLayer.innerHTML = "";
+  truckRender(true); updateAnimButtons();
+}
+
+function updateAnimButtons(){
+  var play = document.getElementById("anim-play"), pause = document.getElementById("anim-pause");
+  if(!play || !pause) return;
+  play.classList.toggle("active", (TRUCK.state === "moving" || TRUCK.state === "loading"));
+  pause.classList.toggle("active", TRUCK.state === "paused");
+}
+
+function initTruckAnim(){
+  buildTruckRoute();
+  if(TRUCK.segs.length > 0){ var s0 = TRUCK.segs[0]; TRUCK.angle = Math.atan2(s0.y2 - s0.y1, s0.x2 - s0.x1) * 180 / Math.PI; }
+  TRUCK.dist = 0; TRUCK.state = "idle"; TRUCK.loaded = false; TRUCK.loadTimer = 0;
+  truckRender(true); updateAnimButtons();
+  document.getElementById("anim-play").addEventListener("click", truckPlay);
+  document.getElementById("anim-pause").addEventListener("click", truckPause);
+  document.getElementById("anim-reset").addEventListener("click", truckReset);
+}
+
+/* ============================================================
+   UI И ИНТЕРАКТИВ
+   ============================================================ */
+function openCard(building){
+  var card = document.getElementById("card");
+  document.getElementById("card-name").textContent = building.name;
+  document.getElementById("card-code").textContent = building.code + " · " + building.group;
+  var body = document.getElementById("card-body"); body.innerHTML = "";
+  var rows = [];
+  if(building.purpose) rows.push(["Назначение", building.purpose]);
+  if(building.capacity) rows.push(["Вместимость", building.capacity + " " + (building.unit || "")]);
+  rows.forEach(function(pair){ var row = document.createElement("div"); row.className = "spec-row"; row.innerHTML = '<span class="label">' + escapeHtml(pair[0]) + '</span><span class="value">' + escapeHtml(pair[1]) + '</span>'; body.appendChild(row); });
+  if(building.description){ var desc = document.createElement("div"); desc.className = "card-desc"; desc.textContent = building.description; body.appendChild(desc); }
+  var tourBtn = document.getElementById("card-tour"), tourUrl = "https://jerseyfarm.ru/3dtour/Agroinvest.html";
+  if(building.tourScene) tourUrl += "#" + building.tourScene;
+  tourBtn.href = tourUrl;
+  card.classList.add("visible");
+}
+
+function closeCard(){
+  document.getElementById("card").classList.remove("visible");
+  APP.svg.querySelectorAll(".building-group").forEach(function(el2){
+    el2.setAttribute("filter", "url(#soft-shadow)");
+    var paths = el2.querySelectorAll("path"); if(paths[0]) paths[0].setAttribute("stroke-width", 1);
+  });
+}
+
+function highlightBuilding(g){
+  APP.svg.querySelectorAll(".building-group").forEach(function(el2){
+    el2.setAttribute("filter", "url(#soft-shadow)");
+    var paths = el2.querySelectorAll("path"); if(paths[0]) paths[0].setAttribute("stroke-width", 1);
+  });
+  var paths = g.querySelectorAll("path"); if(paths[0]) paths[0].setAttribute("stroke-width", 2.8);
+}
+
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+function clampViewBox(vb) {
+  var baseW = APP.baseViewBox.w, baseH = APP.baseViewBox.h;
+  var minW = baseW * 0.15, maxW = baseW * 1.3;
+  if (vb.w < minW) { vb.w = minW; vb.h = minW * (baseH / baseW); }
+  if (vb.w > maxW) { vb.w = maxW; vb.h = maxW * (baseH / baseW); }
+  var paddingX = vb.w * 0.2, paddingY = vb.h * 0.2;
+  var minX = -paddingX, maxX = baseW - vb.w + paddingX;
+  var minY = -paddingY, maxY = baseH - vb.h + paddingY;
+  if (vb.x < minX) vb.x = minX; if (vb.x > maxX) vb.x = maxX;
+  if (vb.y < minY) vb.y = minY; if (vb.y > maxY) vb.y = maxY;
+  return vb;
+}
+
+function initPanZoom(){
+  var map = document.getElementById("map"), svg = APP.svg, startClientX = 0, startClientY = 0, startVB = null, isDragging = false, rafId = null;
+  map.addEventListener("mousedown", function(e){ if(e.button !== 0 || e.target.closest(".building-group")) return; isDragging = true; map.classList.add("dragging"); startClientX = e.clientX; startClientY = e.clientY; startVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h }; e.preventDefault(); });
+  window.addEventListener("mousemove", function(e){
+    if(!isDragging) return;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(function() {
+      var rect = svg.getBoundingClientRect(), dxPx = e.clientX - startClientX, dyPx = e.clientY - startClientY;
+      var dxSvg = dxPx * (startVB.w / rect.width), dySvg = dyPx * (startVB.h / rect.height);
+      APP.viewBox = clampViewBox({ x: startVB.x - dxSvg, y: startVB.y - dySvg, w: startVB.w, h: startVB.h });
+      applyViewBox();
+    });
+  });
+  window.addEventListener("mouseup", function(){ if(isDragging) { isDragging = false; map.classList.remove("dragging"); if (rafId) cancelAnimationFrame(rafId); } });
+  map.addEventListener("wheel", function(e){
+    e.preventDefault(); var rect = svg.getBoundingClientRect(), cx = (e.clientX - rect.left) / rect.width, cy = (e.clientY - rect.top) / rect.height;
+    var px = APP.viewBox.x + cx * APP.viewBox.w, py = APP.viewBox.y + cy * APP.viewBox.h, factor = e.deltaY < 0 ? 0.85 : 1/0.85;
+    var nw = APP.viewBox.w * factor, nh = APP.viewBox.h * factor;
+    APP.viewBox = clampViewBox({ x: px - cx * nw, y: py - cy * nh, w: nw, h: nh });
+    applyViewBox();
+  }, { passive: false });
+}
+
+function applyViewBox(){ var v = APP.viewBox; APP.svg.setAttribute("viewBox", v.x + " " + v.y + " " + v.w + " " + v.h); }
+function zoomBy(factor){ var v = APP.viewBox, cx = v.x + v.w/2, cy = v.y + v.h/2, nw = v.w * factor, nh = v.h * factor; APP.viewBox = clampViewBox({ x:cx-nw/2, y:cy-nh/2, w:nw, h:nh }); applyViewBox(); }
+function zoomFit(){ APP.viewBox = { x:0, y:0, w:APP.baseViewBox.w, h:APP.baseViewBox.h }; applyViewBox(); }
+
+function renderLegend(){
+  var list = document.getElementById("legend-list"); list.innerHTML = "";
+  [ ["Корпуса", COLORS_BY_GROUP["Корпуса"].roof], ["Корма", COLORS_BY_GROUP["Корма и склады"].roof], ["Служебные", COLORS_BY_GROUP["Служебные"].roof], ["Лагуны", STYLE.laguna], ["Пруд", "#8fd0e8"] ].forEach(function(pair){
+    var row = document.createElement("div"); row.className = "legend-item"; row.innerHTML = '<span class="legend-swatch" style="background:' + pair[1] + '"></span><span>' + pair[0] + '</span>'; list.appendChild(row);
+  });
+}
+
+function initSoundToggle(){ var btn = document.getElementById("sound-toggle"); btn.addEventListener("click", function(){ btn.classList.toggle("active"); btn.querySelector(".icon").textContent = btn.classList.contains("active") ? "🔊" : "🔇"; }); }
+function initTourToggle(){ document.getElementById("tour-toggle").addEventListener("click", function(){ alert("3D-тур доступен по клику на конкретное здание.\nЛибо запустите анимацию молоковоза кнопкой ▶."); }); }
+function initHint(){ setTimeout(function(){ var hint = document.getElementById("hint"); if(hint) hint.classList.add("hidden"); }, 7000); }
+
+try {
+  APP.svg = document.getElementById("plan");
+  computeBounds(); renderMap(); renderLegend(); initPanZoom(); initTruckAnim(); initSoundToggle(); initTourToggle(); initHint();
+  document.getElementById("zoom-in").addEventListener("click", function(){ zoomBy(0.75); });
+  document.getElementById("zoom-out").addEventListener("click", function(){ zoomBy(1/0.75); });
+  document.getElementById("zoom-fit").addEventListener("click", zoomFit);
+  document.getElementById("card-close").addEventListener("click", closeCard);
+  applyViewBox();
+  
+  requestAnimationFrame(ambientLoop);
+  
+} catch(err) {
+  console.error(err);
+  document.body.innerHTML = "<pre style='padding:20px;color:red;font-size:14px'>Ошибка: " + err.message + "\n\n" + err.stack + "</pre>";
+}
+</script>
+</body>
+</html>
