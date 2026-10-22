@@ -60,7 +60,7 @@ body{
 #map{
   position:fixed;top:60px;left:0;right:0;bottom:0;
   cursor:grab;user-select:none;background:#7a9e44;
-  touch-action: none; /* Важно для тач-событий */
+  touch-action: none;
 }
 #map.dragging{cursor:grabbing}
 #plan{width:100%;height:100%;display:block}
@@ -250,42 +250,72 @@ body{
 
 <script>
 /* ============================================================
-   ДАННЫЕ ФЕРМЫ
+   ДАННЫЕ ФЕРМЫ (СТРОГО ПО СКРИНШОТУ)
    ============================================================ */
 var FARM = {
   buildings: [
-    { id:"K1", code:"К1", name:"Корпус 1", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Первый корпус.", tourScene:"k1", coords:[[1400960,458250],[1401100,458250],[1401100,458310],[1400960,458310]] },
-    { id:"K2", code:"К2", name:"Корпус 2", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k2", coords:[[1400960,458160],[1401100,458160],[1401100,458220],[1400960,458220]] },
-    { id:"DMB", code:"ДМБ", name:"Доильно-молочный блок", group:"Корпуса", purpose:"Переработка молока", capacity:20, unit:"тонн/сутки", description:"Приёмка молока.", tourScene:"dmb", coords:[[1400960,458070],[1401100,458070],[1401100,458130],[1400960,458130]] },
-    { id:"K3", code:"К3", name:"Корпус 3", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k3", coords:[[1400960,457980],[1401100,457980],[1401100,458040],[1400960,458040]] },
-    { id:"K4", code:"К4", name:"Корпус 4", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k4", coords:[[1400960,457890],[1401100,457890],[1401100,457950],[1400960,457950]] },
-    { id:"K5", code:"К5", name:"Корпус 5", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k5", coords:[[1400960,457800],[1401100,457800],[1401100,457860],[1400960,457860]] },
-    { id:"K6", code:"К6", name:"Корпус 6", group:"Корпуса", purpose:"Родильное отделение", capacity:60, unit:"голов", description:"Корпус для отёла.", tourScene:"k6", coords:[[1400960,457710],[1401100,457710],[1401100,457770],[1400960,457770]] },
-    { id:"K7", code:"K7", name:"Корпус 7", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k7", coords:[[1400960,457620],[1401100,457620],[1401100,457680],[1400960,457680]] },
-    { id:"K8", code:"К8", name:"Корпус 8", group:"Корпуса", purpose:"Площадка для телят", capacity:80, unit:"голов", description:"Телятник.", tourScene:"k8", coords:[[1400820,457800],[1400880,457800],[1400880,458250],[1400820,458250]] },
-    { id:"K11", code:"К11", name:"Корпус 11", group:"Корпуса", purpose:"Крематорий", capacity:0, unit:"", description:"Кремация отходов.", tourScene:"k11", coords:[[1400829,458170],[1400875,458170],[1400874,458204],[1400829,458204]] },
-    { id:"K12", code:"К12", name:"Корпус 12", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k12", coords:[[1400773,458248],[1400818,458248],[1400818,458281],[1400773,458281]] },
-    { id:"K13", code:"К13", name:"Корпус 13", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k13", coords:[[1400773,458294],[1400818,458294],[1400818,458327],[1400773,458327]] },
-    { id:"K14", code:"К14", name:"Корпус 14", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k14", coords:[[1400773,458341],[1400818,458341],[1400818,458374],[1400773,458374]] },
-    { id:"K15", code:"К15", name:"Корпус 15", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k15", coords:[[1400832,458273],[1400859,458273],[1400859,458379],[1400832,458379]] },
-    { id:"K9", code:"К9", name:"Корпус 9", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k9", coords:[[1401180,457620],[1401240,457620],[1401240,457800],[1401180,457800]] },
-    { id:"K10", code:"К10", name:"Корпус 10", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k10", coords:[[1401180,457890],[1401240,457890],[1401240,458070],[1401180,458070]] },
-    { id:"Sennik", code:"Сенник", name:"Сенник / кормоцех", group:"Корма и склады", purpose:"Хранение сена", capacity:0, unit:"", description:"Хранение грубых кормов.", tourScene:"", coords:[[1400820,458310],[1400880,458310],[1400880,458450],[1400820,458450]] },
-    { id:"ST1", code:"СТ1", name:"Силосная траншея 1", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1401140,457800],[1401160,457800],[1401160,458250],[1401140,458250]] },
-    { id:"Laguna1", code:"Лагуна 1", name:"Лагуна 1", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Лагуна стоков.", tourScene:"laguna1", coords:[[1401150,457500],[1401250,457500],[1401250,457580],[1401150,457580]] },
-    { id:"Laguna2", code:"Лагуна 2", name:"Лагуна 2", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Вторая лагуна.", tourScene:"laguna2", coords:[[1401280,457500],[1401380,457500],[1401380,457580],[1401280,457580]] },
-    { id:"Prud", code:"Пруд", name:"Пожарный водоём", group:"Водоёмы", purpose:"Пожарный запас", capacity:0, unit:"", description:"Пожарный водоём.", tourScene:"prud", coords:[[1401130,458350],[1401180,458350],[1401180,458400],[1401130,458400]] },
-    { id:"Ofis", code:"Офис", name:"АБК / офис", group:"Служебные", purpose:"Администрация", capacity:0, unit:"", description:"АБК.", tourScene:"ofis", coords:[[1401130,458250],[1401180,458250],[1401180,458310],[1401130,458310]] },
-    { id:"KPPV", code:"КПП Верх", name:"КПП 1 — верхний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Верхний въезд.", tourScene:"kpp-verh", coords:[[1401110,458270],[1401130,458270],[1401130,458290],[1401110,458290]] },
-    { id:"KPPN", code:"КПП Низ", name:"КПП 2 — нижний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Нижний въезд.", tourScene:"kpp-niz", coords:[[1400790,457550],[1400810,457550],[1400810,457570],[1400790,457570]] }
+    // === ЦЕНТРАЛЬНЫЙ РЯД ===
+    { id:"K1", code:"К1", name:"Корпус 1", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Первый корпус.", tourScene:"k1", coords:[[1400950,458380],[1401100,458380],[1401100,458430],[1400950,458430]] },
+    { id:"K2", code:"К2", name:"Корпус 2", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k2", coords:[[1400950,458280],[1401100,458280],[1401100,458330],[1400950,458330]] },
+    { id:"DMB", code:"ДМБ", name:"Доильно-молочный блок", group:"Корпуса", purpose:"Переработка молока", capacity:20, unit:"тонн/сутки", description:"Приёмка молока.", tourScene:"dmb", coords:[[1400950,458180],[1401100,458180],[1401100,458230],[1400950,458230]] },
+    { id:"K3", code:"К3", name:"Корпус 3", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k3", coords:[[1400950,458080],[1401100,458080],[1401100,458130],[1400950,458130]] },
+    { id:"K4", code:"К4", name:"Корпус 4", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k4", coords:[[1400950,457980],[1401100,457980],[1401100,458030],[1400950,458030]] },
+    { id:"K5", code:"К5", name:"Корпус 5", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k5", coords:[[1400950,457880],[1401100,457880],[1401100,457930],[1400950,457930]] },
+    { id:"K6", code:"К6", name:"Корпус 6", group:"Корпуса", purpose:"Родильное отделение", capacity:60, unit:"голов", description:"Корпус для отёла.", tourScene:"k6", coords:[[1400950,457780],[1401100,457780],[1401100,457830],[1400950,457830]] },
+    { id:"K7", code:"К7", name:"Корпус 7", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k7", coords:[[1400950,457680],[1401100,457680],[1401100,457730],[1400950,457730]] },
+    { id:"Telyata", code:"Телята", name:"Площадка телят", group:"Площадки", purpose:"Выгул", capacity:0, unit:"", description:"Площадка телят.", tourScene:"", coords:[[1400950,457580],[1401050,457580],[1401050,457650],[1400950,457650]] },
+
+    // === ЛЕВОЕ КРЫЛО ===
+    { id:"K14", code:"К14", name:"Корпус 14", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k14", coords:[[1400820,458340],[1400860,458340],[1400860,458380],[1400820,458380]] },
+    { id:"K13", code:"К13", name:"Корпус 13", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k13", coords:[[1400820,458280],[1400860,458280],[1400860,458320],[1400820,458320]] },
+    { id:"K12", code:"К12", name:"Корпус 12", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k12", coords:[[1400820,458220],[1400860,458220],[1400860,458260],[1400820,458260]] },
+    { id:"K15", code:"К15", name:"Корпус 15", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k15", coords:[[1400880,458220],[1400920,458220],[1400920,458380],[1400880,458380]] },
+    { id:"K11", code:"К11", name:"Корпус 11", group:"Корпуса", purpose:"Крематорий", capacity:0, unit:"", description:"Кремация отходов.", tourScene:"k11", coords:[[1400860,458120],[1400900,458120],[1400900,458160],[1400860,458160]] },
+
+    // === СИЛОСНЫЕ ТРАНШЕИ И КОРМА ===
+    { id:"ST1", code:"СТ1", name:"Силосная траншея 1", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400800,457980],[1400820,457980],[1400820,458080],[1400800,458080]] },
+    { id:"ST2", code:"СТ2", name:"Силосная траншея 2", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400830,457980],[1400850,457980],[1400850,458080],[1400830,458080]] },
+    { id:"ST3", code:"СТ3", name:"Силосная траншея 3", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400860,457980],[1400880,457980],[1400880,458080],[1400860,458080]] },
+    { id:"ST4", code:"СТ4", name:"Силосная траншея 4", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400800,457890],[1400820,457890],[1400820,457970],[1400800,457970]] },
+    { id:"ST5", code:"СТ5", name:"Силосная траншея 5", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400830,457890],[1400850,457890],[1400850,457970],[1400830,457970]] },
+    { id:"ST6", code:"СТ6", name:"Силосная траншея 6", group:"Корма и склады", purpose:"Хранение силоса", capacity:0, unit:"", description:"Траншея для силоса.", tourScene:"", coords:[[1400860,457890],[1400880,457890],[1400880,457970],[1400860,457970]] },
+    { id:"KormDvor", code:"Корм.двор", name:"Кормовой двор", group:"Площадки", purpose:"Кормление", capacity:0, unit:"", description:"Площадка для кормления.", tourScene:"", coords:[[1400800,457800],[1400880,457800],[1400880,457880],[1400800,457880]] },
+    { id:"ZS", code:"ЗС", name:"Зерносклад", group:"Корма и склады", purpose:"Хранение зерна", capacity:0, unit:"", description:"Зерносклад.", tourScene:"", coords:[[1400890,457800],[1400930,457800],[1400930,457880],[1400890,457880]] },
+    
+    // === СКЛАДЫ И НИЗ ===
+    { id:"Sennik", code:"Сенник", name:"Сенник / кормоцех", group:"Корма и склады", purpose:"Хранение сена", capacity:0, unit:"", description:"Хранение грубых кормов.", tourScene:"", coords:[[1400800,457680],[1400930,457680],[1400930,457740],[1400800,457740]] },
+    { id:"Sklad3", code:"Склад 3", name:"Склад 3", group:"Корма и склады", purpose:"Хранение кормов", capacity:0, unit:"", description:"Склад комбикормов.", tourScene:"", coords:[[1400850,457580],[1400900,457580],[1400900,457630],[1400850,457630]] },
+    { id:"Sklad2", code:"Склад 2", name:"Склад 2", group:"Корма и склады", purpose:"Хранение кормов", capacity:0, unit:"", description:"Склад комбикормов.", tourScene:"", coords:[[1400850,457510],[1400900,457510],[1400900,457560],[1400850,457560]] },
+    { id:"Sklad1", code:"Склад 1", name:"Склад 1", group:"Корма и склады", purpose:"Хранение кормов", capacity:0, unit:"", description:"Склад комбикормов.", tourScene:"", coords:[[1400850,457440],[1400900,457440],[1400900,457490],[1400850,457490]] },
+    { id:"PlSena", code:"Пл.сена", name:"Площадка для сена", group:"Площадки", purpose:"Хранение сена", capacity:0, unit:"", description:"Открытая площадка.", tourScene:"", coords:[[1400780,457550],[1400830,457550],[1400830,457620],[1400780,457620]] },
+    { id:"Naves", code:"Навес-1", name:"Навес 1", group:"Служебные", purpose:"Укрытие", capacity:0, unit:"", description:"Навес.", tourScene:"", coords:[[1400780,457480],[1400830,457480],[1400830,457530],[1400780,457530]] },
+    { id:"Obschaga", code:"Общежитие", name:"Общежитие", group:"Служебные", purpose:"Проживание", capacity:40, unit:"мест", description:"Общежитие.", tourScene:"", coords:[[1400780,457400],[1400830,457400],[1400830,457450],[1400780,457450]] },
+    { id:"Vesovaya", code:"Весовая", name:"Весовая", group:"Служебные", purpose:"Взвешивание", capacity:0, unit:"", description:"Весы.", tourScene:"", coords:[[1400840,457420],[1400870,457420],[1400870,457450],[1400840,457450]] },
+    { id:"RemTseh", code:"Рем.цех", name:"Ремонтный цех", group:"Служебные", purpose:"Ремонт", capacity:0, unit:"", description:"Ремцех.", tourScene:"", coords:[[1400880,457430],[1400920,457430],[1400920,457470],[1400880,457470]] },
+    { id:"Boksy", code:"Боксы-СХТ", name:"Боксы СХТ", group:"Служебные", purpose:"Техника", capacity:0, unit:"", description:"Боксы.", tourScene:"", coords:[[1400850,457350],[1400900,457350],[1400900,457390],[1400850,457390]] },
+    { id:"KPPN", code:"КПП Низ", name:"КПП 2 — нижний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Нижний въезд.", tourScene:"kpp-niz", coords:[[1400800,457300],[1400830,457300],[1400830,457330],[1400800,457330]] },
+
+    // === ПРАВОЕ КРЫЛО ===
+    { id:"K10", code:"К10", name:"Корпус 10", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k10", coords:[[1401180,457980],[1401220,457980],[1401220,458180],[1401180,458180]] },
+    { id:"K9", code:"К9", name:"Корпус 9", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k9", coords:[[1401180,457680],[1401220,457680],[1401220,457880],[1401180,457880]] },
+    
+    // === ВОДОЁМЫ ===
+    { id:"Laguna1", code:"НВ5-ЮЛ1", name:"Лагуна 1", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Лагуна стоков.", tourScene:"laguna1", coords:[[1401100,457350],[1401180,457350],[1401180,457530],[1401100,457530]] },
+    { id:"Laguna2", code:"НВ5-ЮЛ2", name:"Лагуна 2", group:"Водоёмы", purpose:"Хранение стоков", capacity:0, unit:"", description:"Вторая лагуна.", tourScene:"laguna2", coords:[[1401200,457350],[1401280,457350],[1401280,457530],[1401200,457530]] },
+    { id:"Prud", code:"Пруд", name:"Пожарный водоём", group:"Водоёмы", purpose:"Пожарный запас", capacity:0, unit:"", description:"Пожарный водоём.", tourScene:"prud", coords:[[1401060,457350],[1401100,457350],[1401100,457400],[1401060,457400]] },
+
+    // === ВЕРХНЕЕ ПРАВО ===
+    { id:"Ofis", code:"Офис", name:"АБК / офис", group:"Служебные", purpose:"Администрация", capacity:0, unit:"", description:"АБК.", tourScene:"ofis", coords:[[1401160,458250],[1401200,458250],[1401200,458330],[1401160,458330]] },
+    { id:"Parkovka", code:"Парковка", name:"Парковка офиса", group:"Служебные", purpose:"Парковка", capacity:20, unit:"мест", description:"Парковка.", tourScene:"", coords:[[1401140,458250],[1401160,458250],[1401160,458330],[1401140,458330]] },
+    { id:"KPPV", code:"КПП Верх", name:"КПП 1 — верхний", group:"Служебные", purpose:"Пропускной пункт", capacity:0, unit:"", description:"Верхний въезд.", tourScene:"kpp-verh", coords:[[1401140,458180],[1401160,458180],[1401160,458220],[1401140,458220]] }
   ],
   truckRoute: {
     speed: 100, loadDuration: 3.0,
     points: [
-      { x:1400800, y:457560 }, { x:1400940, y:457560 }, { x:1400940, y:458100 },
-      { x:1400940, y:458100, action:"load" },
-      { x:1401110, y:458100 }, { x:1401110, y:458280 }, { x:1401130, y:458280 },
-      { x:1401600, y:458280 }, { x:1403000, y:458280 }
+      { x:1400815, y:457315 }, { x:1400930, y:457315 }, { x:1400930, y:458205 },
+      { x:1400950, y:458205, action:"load" },
+      { x:1401120, y:458205 }, { x:1401120, y:458330 }, { x:1401160, y:458330 },
+      { x:1403000, y:458330 }
     ]
   }
 };
@@ -307,12 +337,14 @@ var COLORS_BY_GROUP = {
 };
 
 var ROADS = [
-  { pts:[[1400940,457550],[1400940,458300]], w:8 },
-  { pts:[[1401110,457550],[1401110,458300]], w:8 },
-  { pts:[[1400940,458100],[1401110,458100]], w:8 },
-  { pts:[[1400940,458280],[1401130,458280]], w:8 },
-  { pts:[[1400800,457560],[1400940,457560]], w:6 },
-  { pts:[[1401110,458280],[1403200,458280]], w:8 }
+  { pts:[[1400930,457300],[1400930,458400]], w:8 },
+  { pts:[[1401120,457500],[1401120,458400]], w:8 },
+  { pts:[[1400930,458400],[1401140,458400]], w:8 },
+  { pts:[[1400930,458205],[1401140,458205]], w:8 },
+  { pts:[[1400930,458105],[1401140,458105]], w:8 },
+  { pts:[[1400930,457705],[1401140,457705]], w:8 },
+  { pts:[[1400800,457315],[1400930,457315]], w:6 },
+  { pts:[[1401120,458330],[1403200,458330]], w:8 }
 ];
 
 var APP = { svg:null, viewBox:{x:0,y:0,w:1000,h:1000}, baseViewBox:{x:0,y:0,w:1000,h:1000}, bounds:null, buildingBounds:null, isDragging:false };
@@ -376,10 +408,12 @@ function buildDefs(){
   wg.appendChild(el("stop", { offset:"100%","stop-color":"#6cbad9" }));
   defs.appendChild(wg);
 
+  // ТЕКСТУРА ГРАВИЯ (Проверьте наличие gravel.jpg рядом с index.html)
   var gravelPat = el("pattern", { id:"gravel-pattern", width:256, height:256, patternUnits:"userSpaceOnUse" });
   gravelPat.appendChild(el("image", { href:"gravel.jpg", width:256, height:256, preserveAspectRatio:"xMidYMid slice" }));
   defs.appendChild(gravelPat);
 
+  // ТЕКСТУРА КРЫШИ (Проверьте наличие roof.jpg рядом с index.html)
   var roofPat = el("pattern", { id:"roof-pattern", width:128, height:128, patternUnits:"userSpaceOnUse" });
   roofPat.appendChild(el("image", { href:"roof.jpg", width:128, height:128, preserveAspectRatio:"xMidYMid slice" }));
   defs.appendChild(roofPat);
@@ -416,51 +450,42 @@ function renderMap(){
 
   drawTrees();
 
-  // 1. Фоновые объекты (тракторы, коровы) - ПОД зданиями
   var ambientGround = el("g", { id:"ambient-ground" });
   APP.svg.appendChild(ambientGround);
 
-  // 2. Пыль из-под колес - ПОД молоковозом
   TRUCK.dustLayer = el("g", { id:"dust-layer" });
   APP.svg.appendChild(TRUCK.dustLayer);
 
-  // 3. Сам молоковоз - ПОД зданиями
   var truckLayer = el("g", { id:"truck-layer" });
   truckLayer.appendChild(buildTruckModel());
   APP.svg.appendChild(truckLayer);
 
-  // 4. ЗДАНИЯ - перекрывают тракторы и молоковоз
   var buildingsLayer = el("g", {});
   FARM.buildings.filter(function(x){ return x.group !== "Водоёмы"; }).forEach(function(building){ drawBuilding(buildingsLayer, building); });
   APP.svg.appendChild(buildingsLayer);
 
-  // 5. Оверлеи (шланг, текст загрузки, самолет) - ПОВЕРХ зданий
   var overlayLayer = el("g", { id:"overlay-layer" });
-  
   TRUCK.statusEl = buildTruckStatus();
   overlayLayer.appendChild(TRUCK.statusEl);
-  
   TRUCK.hoseEl = el("path", { d:"", fill:"none", stroke:"#2a2a2a", "stroke-width":4, "stroke-linecap":"round", opacity:0 });
   overlayLayer.appendChild(TRUCK.hoseEl);
-
   var skyLayer = el("g", { id:"sky-layer" });
   overlayLayer.appendChild(skyLayer);
-  
   APP.svg.appendChild(overlayLayer);
 
-  // 6. Подписи и компас
+  // Подписи для всех объектов
   var labelsLayer = el("g", { "pointer-events":"none" });
   FARM.buildings.filter(function(x){
-    if(x.group === "Водоёмы" || !x.code) return false;
-    if(x.group === "Корпуса") return true;
-    if(x.group === "Служебные" && (x.code === "Офис" || x.code === "КПП Верх" || x.code === "КПП Низ")) return true;
-    return false;
+    return x.group !== "Водоёмы" && x.code;
   }).forEach(function(building){
     var bb = bboxOfCoords(building.coords);
     var pt = toSvg((bb.minX+bb.maxX)/2, (bb.minY+bb.maxY)/2);
+    
     var offsetX = 0, offsetY = -12;
-    if (building.id === "KPPV") { offsetX = -12; offsetY = 16; }
-    if (building.id === "Ofis") { offsetX = 16; offsetY = -16; }
+    if (building.id === "KPPV") { offsetX = -20; offsetY = 16; }
+    if (building.id === "Ofis") { offsetX = 20; offsetY = -10; }
+    if (building.id === "Laguna1" || building.id === "Laguna2") { offsetY = 0; offsetX = 0; }
+
     drawLabel(labelsLayer, pt[0] + offsetX, pt[1] + offsetY, building.code);
   });
   APP.svg.appendChild(labelsLayer);
@@ -562,6 +587,7 @@ function drawBuilding(layer, building){
   pts.forEach(function(p, i){ roofD += (i===0 ? "M " : "L ") + (p[0] + 1) + " " + (p[1] - 4); });
   roofD += " Z";
   
+  // Применяем текстуру крыши
   g.appendChild(el("path", { d: roofD, fill: "url(#roof-pattern)", stroke: palette.stroke, "stroke-width": 1.5, "stroke-linejoin": "round" }));
   g.appendChild(el("path", { d: roofD, fill: palette.roof, opacity: 0.4, "pointer-events": "none" }));
 
@@ -623,12 +649,10 @@ function buildCow() {
   g.appendChild(el("ellipse", { cx:0, cy:1.5, rx:9, ry:4.5, fill:"#000", opacity:"0.2" })); 
   
   var body = el("g", { "class": "cow-body" }); 
-  
   body.appendChild(el("rect", { x:-6, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:-3, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:2, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:5, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
-  
   body.appendChild(el("ellipse", { cx:0, cy:0, rx:8, ry:4.5, fill:"#f8f8f8", stroke:"#333", "stroke-width":1 }));
   body.appendChild(el("path", { d:"M -5,-2 Q -2,-4 1,-1 Q -1,2 -4,2 Z", fill:"#222" }));
   body.appendChild(el("ellipse", { cx:3, cy:1.5, rx:2.5, ry:1.5, fill:"#222" }));
@@ -768,7 +792,8 @@ function initAmbient() {
   var skyLayer = document.getElementById("sky-layer");
   var rnd = makeRandom(42);
   
-  var cowBaseX = 1400550, cowBaseY = 458250;
+  // КОРОВЫ (Сдвинуты правее, в центр левого поля)
+  var cowBaseX = 1400650, cowBaseY = 457850;
   for (var i=0; i<10; i++) {
     var c = buildCow();
     var posX = cowBaseX + (rnd() - 0.5) * 120;
@@ -784,24 +809,26 @@ function initAmbient() {
     groundLayer.appendChild(c.el);
   }
 
-  var tractorPath1 = createPathData([{x:1400400, y:457600}, {x:1400400, y:457200}, {x:1400700, y:457200}, {x:1400700, y:457600}, {x:1400400, y:457600}]);
+  // ЛЕВЫЙ ТРАКТОР (сдвинут влево и вниз)
+  var tractorPath1 = createPathData([{x:1400200, y:457600}, {x:1400200, y:457200}, {x:1400600, y:457200}, {x:1400600, y:457600}, {x:1400200, y:457600}]);
   var tr1 = buildTractor();
   AMBIENT.tractors.push({ el: tr1.el, body: tr1.body, path: tractorPath1, dist: 0, speed: 20, trailEl: el("path", { fill:"none", stroke:"#5a4a30", "stroke-width":3, opacity:0.4 }) });
   groundLayer.appendChild(AMBIENT.tractors[0].trailEl);
   groundLayer.appendChild(tr1.el);
 
-  var tractorPath2 = createPathData([{x:1401600, y:457600}, {x:1401600, y:457900}, {x:1402100, y:457900}, {x:1402100, y:457600}, {x:1401600, y:457600}]);
+  // ПРАВЫЙ ТРАКТОР (сдвинут дальше вправо, чтобы не заезжать на дорогу)
+  var tractorPath2 = createPathData([{x:1401500, y:458300}, {x:1401500, y:457900}, {x:1401900, y:457900}, {x:1401900, y:458300}, {x:1401500, y:458300}]);
   var tr2 = buildTractor();
   AMBIENT.tractors.push({ el: tr2.el, body: tr2.body, path: tractorPath2, dist: 0, speed: 18, trailEl: el("path", { fill:"none", stroke:"#5a4a30", "stroke-width":3, opacity:0.4 }) });
   groundLayer.appendChild(AMBIENT.tractors[1].trailEl);
   groundLayer.appendChild(tr2.el);
 
+  // РАБОЧИЕ
   var wPaths = [
-    createPathData([{x:1401120, y:458280}, {x:1401150, y:458280}, {x:1401150, y:458250}]),
-    createPathData([{x:1401000, y:458010}, {x:1400900, y:458010}, {x:1400840, y:458040}]),
-    createPathData([{x:1401140, y:458200}, {x:1401140, y:458100}, {x:1401160, y:458100}]),
-    createPathData([{x:1400900, y:458150}, {x:1400930, y:458150}, {x:1400930, y:458200}]),
-    createPathData([{x:1400800, y:458300}, {x:1400800, y:458400}, {x:1400850, y:458400}])
+    createPathData([{x:1401150, y:458380}, {x:1401180, y:458380}, {x:1401180, y:458350}]),
+    createPathData([{x:1400980, y:457800}, {x:1400980, y:457700}]),
+    createPathData([{x:1400980, y:458200}, {x:1400980, y:458300}]),
+    createPathData([{x:1400860, y:457600}, {x:1400860, y:457700}])
   ];
   wPaths.forEach(function(path, i) {
     var w = buildWorker();
@@ -809,6 +836,7 @@ function initAmbient() {
     groundLayer.appendChild(w.el);
   });
 
+  // САМОЛЕТ
   var plane = buildAirplane();
   skyLayer.appendChild(plane);
   AMBIENT.airplane = {
@@ -996,7 +1024,7 @@ function truckRender(instant){
 
   if (TRUCK.hoseEl) {
     if (TRUCK.state === "loading") {
-      var dmbPt = toSvg(1400960, 458100); 
+      var dmbPt = toSvg(1400950, 458205); 
       var truckPt = p;
       TRUCK.hoseEl.setAttribute("d", "M " + dmbPt[0] + " " + dmbPt[1] + " Q " + ((dmbPt[0]+truckPt.x)/2) + " " + (dmbPt[1]-15) + " " + truckPt.x + " " + truckPt.y);
       TRUCK.hoseEl.setAttribute("opacity", 1);
@@ -1112,7 +1140,6 @@ function initPanZoom(){
   var startClientX = 0, startClientY = 0, startVB = null;
   var isDragging = false, rafId = null;
 
-  // --- МЫШЬ (ПК) ---
   map.addEventListener("mousedown", function(e){
     if(e.button !== 0 || e.target.closest(".building-group")) return;
     isDragging = true;
@@ -1142,7 +1169,6 @@ function initPanZoom(){
     }
   });
 
-  // --- КОЛЕСО МЫШИ (ЗУМ) ---
   map.addEventListener("wheel", function(e){
     e.preventDefault();
     var rect = svg.getBoundingClientRect();
@@ -1154,7 +1180,6 @@ function initPanZoom(){
     applyViewBox();
   }, { passive: false });
 
-  // --- ТАЧ-СОБЫТИЯ (МОБИЛЬНЫЕ) ---
   var touchStartDist = 0;
   var touchStartVB = null;
 
@@ -1177,7 +1202,7 @@ function initPanZoom(){
   }, { passive: false });
 
   map.addEventListener("touchmove", function(e){
-    e.preventDefault(); // Останавливаем скролл страницы
+    e.preventDefault();
     
     if(e.touches.length === 1 && isDragging && startVB) {
       if (rafId) cancelAnimationFrame(rafId);
@@ -1228,7 +1253,6 @@ function initPanZoom(){
       touchStartVB = null;
       if (rafId) cancelAnimationFrame(rafId);
     } else if (e.touches.length === 1) {
-      // Если отпустили один палец при зуме, переключаемся на панорамирование
       isDragging = true;
       startClientX = e.touches[0].clientX;
       startClientY = e.touches[0].clientY;
