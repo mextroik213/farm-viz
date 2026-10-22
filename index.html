@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Ферма «Агроинвест» — виртуальная экскурсия</title>
 <style>
 :root{
@@ -60,7 +60,7 @@ body{
 #map{
   position:fixed;top:60px;left:0;right:0;bottom:0;
   cursor:grab;user-select:none;background:#7a9e44;
-  touch-action: none;
+  touch-action: none; /* Важно для тач-событий */
 }
 #map.dragging{cursor:grabbing}
 #plan{width:100%;height:100%;display:block}
@@ -261,7 +261,7 @@ var FARM = {
     { id:"K4", code:"К4", name:"Корпус 4", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k4", coords:[[1400960,457890],[1401100,457890],[1401100,457950],[1400960,457950]] },
     { id:"K5", code:"К5", name:"Корпус 5", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k5", coords:[[1400960,457800],[1401100,457800],[1401100,457860],[1400960,457860]] },
     { id:"K6", code:"К6", name:"Корпус 6", group:"Корпуса", purpose:"Родильное отделение", capacity:60, unit:"голов", description:"Корпус для отёла.", tourScene:"k6", coords:[[1400960,457710],[1401100,457710],[1401100,457770],[1400960,457770]] },
-    { id:"K7", code:"К7", name:"Корпус 7", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k7", coords:[[1400960,457620],[1401100,457620],[1401100,457680],[1400960,457680]] },
+    { id:"K7", code:"K7", name:"Корпус 7", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k7", coords:[[1400960,457620],[1401100,457620],[1401100,457680],[1400960,457680]] },
     { id:"K8", code:"К8", name:"Корпус 8", group:"Корпуса", purpose:"Площадка для телят", capacity:80, unit:"голов", description:"Телятник.", tourScene:"k8", coords:[[1400820,457800],[1400880,457800],[1400880,458250],[1400820,458250]] },
     { id:"K11", code:"К11", name:"Корпус 11", group:"Корпуса", purpose:"Крематорий", capacity:0, unit:"", description:"Кремация отходов.", tourScene:"k11", coords:[[1400829,458170],[1400875,458170],[1400874,458204],[1400829,458204]] },
     { id:"K12", code:"К12", name:"Корпус 12", group:"Корпуса", purpose:"Содержание дойного стада", capacity:200, unit:"голов", description:"Корпус дойного стада.", tourScene:"k12", coords:[[1400773,458248],[1400818,458248],[1400818,458281],[1400773,458281]] },
@@ -416,29 +416,39 @@ function renderMap(){
 
   drawTrees();
 
+  // 1. Фоновые объекты (тракторы, коровы) - ПОД зданиями
   var ambientGround = el("g", { id:"ambient-ground" });
   APP.svg.appendChild(ambientGround);
-  
+
+  // 2. Пыль из-под колес - ПОД молоковозом
+  TRUCK.dustLayer = el("g", { id:"dust-layer" });
+  APP.svg.appendChild(TRUCK.dustLayer);
+
+  // 3. Сам молоковоз - ПОД зданиями
+  var truckLayer = el("g", { id:"truck-layer" });
+  truckLayer.appendChild(buildTruckModel());
+  APP.svg.appendChild(truckLayer);
+
+  // 4. ЗДАНИЯ - перекрывают тракторы и молоковоз
   var buildingsLayer = el("g", {});
   FARM.buildings.filter(function(x){ return x.group !== "Водоёмы"; }).forEach(function(building){ drawBuilding(buildingsLayer, building); });
   APP.svg.appendChild(buildingsLayer);
 
-  TRUCK.dustLayer = el("g", { id:"dust-layer" });
-  APP.svg.appendChild(TRUCK.dustLayer);
-
-  var truckLayer = el("g", { id:"truck-layer" });
-  truckLayer.appendChild(buildTruckModel());
-  truckLayer.appendChild(buildTruckStatus());
-  APP.svg.appendChild(truckLayer);
-
-  var hoseLayer = el("g", { id:"hose-layer" });
+  // 5. Оверлеи (шланг, текст загрузки, самолет) - ПОВЕРХ зданий
+  var overlayLayer = el("g", { id:"overlay-layer" });
+  
+  TRUCK.statusEl = buildTruckStatus();
+  overlayLayer.appendChild(TRUCK.statusEl);
+  
   TRUCK.hoseEl = el("path", { d:"", fill:"none", stroke:"#2a2a2a", "stroke-width":4, "stroke-linecap":"round", opacity:0 });
-  hoseLayer.appendChild(TRUCK.hoseEl);
-  APP.svg.appendChild(hoseLayer);
+  overlayLayer.appendChild(TRUCK.hoseEl);
 
   var skyLayer = el("g", { id:"sky-layer" });
-  APP.svg.appendChild(skyLayer);
+  overlayLayer.appendChild(skyLayer);
+  
+  APP.svg.appendChild(overlayLayer);
 
+  // 6. Подписи и компас
   var labelsLayer = el("g", { "pointer-events":"none" });
   FARM.buildings.filter(function(x){
     if(x.group === "Водоёмы" || !x.code) return false;
@@ -576,7 +586,7 @@ function drawMapLabels(){
   var b = APP.bounds, totalW = b.maxX - b.minX, totalH = b.maxY - b.minY;
   var layer = el("g", { "pointer-events": "none" });
 
-  var titleX = totalW * 1.2, titleY = totalH * 0.1;
+  var titleX = totalW * 0.85, titleY = totalH * 0.1;
   var titleGroup = el("g", { transform: "translate(" + titleX + ", " + titleY + ")" });
   var titleText = el("text", { x: 0, y: 0, "text-anchor": "middle", "font-family": "Georgia, serif", "font-size": "42px", "font-weight": "bold", fill: "#ffffff", stroke: "#1f3d10", "stroke-width": "3px", "paint-order": "stroke fill", "letter-spacing": "4px" });
   titleText.textContent = "ФЕРМА «АГРОАЛЬЯНС ИНВЕСТ»"; titleGroup.appendChild(titleText);
@@ -585,7 +595,7 @@ function drawMapLabels(){
   titleGroup.appendChild(el("line", { x1: -220, y1: 20, x2: 220, y2: 20, stroke: "#ffffff", "stroke-width": 3, opacity: 0.9 }));
   layer.appendChild(titleGroup);
 
-  var districtX = totalW * -0.15, districtY = totalH * 0.88;
+  var districtX = totalW * 0.15, districtY = totalH * 0.88;
   var districtGroup = el("g", { transform: "translate(" + districtX + ", " + districtY + ")" });
   var distText = el("text", { x: 0, y: 0, "text-anchor": "middle", "font-family": "Arial, sans-serif", "font-size": "28px", "font-weight": "bold", fill: "#ffffff", stroke: "#1f3d10", "stroke-width": "3px", "paint-order": "stroke fill", "letter-spacing": "12px" });
   distText.textContent = "АЛЕКСАНДРОВСКИЙ РАЙОН"; districtGroup.appendChild(distText);
@@ -614,32 +624,18 @@ function buildCow() {
   
   var body = el("g", { "class": "cow-body" }); 
   
-  // Ноги
   body.appendChild(el("rect", { x:-6, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:-3, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:2, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   body.appendChild(el("rect", { x:5, y:2, width:2, height:3, fill:"#222", rx:0.5 }));
   
-  // Тело
   body.appendChild(el("ellipse", { cx:0, cy:0, rx:8, ry:4.5, fill:"#f8f8f8", stroke:"#333", "stroke-width":1 }));
-  
-  // Пятна
   body.appendChild(el("path", { d:"M -5,-2 Q -2,-4 1,-1 Q -1,2 -4,2 Z", fill:"#222" }));
   body.appendChild(el("ellipse", { cx:3, cy:1.5, rx:2.5, ry:1.5, fill:"#222" }));
-  
-  // Хвост
   body.appendChild(el("path", { d:"M -8,0 Q -11,-1 -12,3", fill:"none", stroke:"#333", "stroke-width":1, "stroke-linecap":"round" }));
-  
-  // Голова
   body.appendChild(el("ellipse", { cx:7, cy:-1, rx:4, ry:3, fill:"#f8f8f8", stroke:"#333", "stroke-width":1 }));
-  
-  // Мордочка
   body.appendChild(el("ellipse", { cx:9, cy:-1, rx:2, ry:1.8, fill:"#f0a0a0", stroke:"#c06060", "stroke-width":0.5 }));
-  
-  // Глаз
   body.appendChild(el("circle", { cx:6, cy:-2, r:0.8, fill:"#111" }));
-  
-  // Уши / Рога
   body.appendChild(el("path", { d:"M 5,-3 L 3,-5 L 6,-5 Z", fill:"#c08060", stroke:"#333", "stroke-width":0.5 }));
   body.appendChild(el("path", { d:"M 8,-3 L 10,-5 L 10,-3 Z", fill:"#c08060", stroke:"#333", "stroke-width":0.5 }));
   
@@ -772,11 +768,9 @@ function initAmbient() {
   var skyLayer = document.getElementById("sky-layer");
   var rnd = makeRandom(42);
   
-  // --- ЛЕВОЕ СТАДО (10 КОРОВ, ПАСУТСЯ РАЗНОБОЙ) ---
   var cowBaseX = 1400550, cowBaseY = 458250;
   for (var i=0; i<10; i++) {
     var c = buildCow();
-    // Разбрасываем в радиусе 120 пикселей
     var posX = cowBaseX + (rnd() - 0.5) * 120;
     var posY = cowBaseY + (rnd() - 0.5) * 120;
     var pt = toSvg(posX, posY);
@@ -790,9 +784,6 @@ function initAmbient() {
     groundLayer.appendChild(c.el);
   }
 
-
-
-  // --- ТРАКТОРЫ ---
   var tractorPath1 = createPathData([{x:1400400, y:457600}, {x:1400400, y:457200}, {x:1400700, y:457200}, {x:1400700, y:457600}, {x:1400400, y:457600}]);
   var tr1 = buildTractor();
   AMBIENT.tractors.push({ el: tr1.el, body: tr1.body, path: tractorPath1, dist: 0, speed: 20, trailEl: el("path", { fill:"none", stroke:"#5a4a30", "stroke-width":3, opacity:0.4 }) });
@@ -805,7 +796,6 @@ function initAmbient() {
   groundLayer.appendChild(AMBIENT.tractors[1].trailEl);
   groundLayer.appendChild(tr2.el);
 
-  // --- РАБОЧИЕ ---
   var wPaths = [
     createPathData([{x:1401120, y:458280}, {x:1401150, y:458280}, {x:1401150, y:458250}]),
     createPathData([{x:1401000, y:458010}, {x:1400900, y:458010}, {x:1400840, y:458040}]),
@@ -819,7 +809,6 @@ function initAmbient() {
     groundLayer.appendChild(w.el);
   });
 
-  // --- САМОЛЕТ ---
   var plane = buildAirplane();
   skyLayer.appendChild(plane);
   AMBIENT.airplane = {
@@ -838,18 +827,6 @@ function ambientLoop(ts) {
   AMBIENT.lastTs = ts;
   if (dt > 0.1) dt = 0.1;
 
-  // Коровы (правое стадо)
-  AMBIENT.cows.forEach(function(c) {
-    c.dist += c.speed * dt;
-    if (c.dist > c.path.total) c.dist -= c.path.total;
-    var p = getPointOnPath(c.path, c.dist);
-    
-    c.el.setAttribute("transform", "translate(" + p.x + "," + p.y + ")");
-    // Смещение вбок (offset) вместе с поворотом
-    c.body.setAttribute("transform", "rotate(" + p.angle + ") translate(" + c.offset + ", 0)");
-  });
-
-  // Тракторы
   AMBIENT.tractors.forEach(function(tr) {
     tr.dist += tr.speed * dt;
     if (tr.dist > tr.path.total) tr.dist = 0;
@@ -859,7 +836,6 @@ function ambientLoop(ts) {
     tr.trailEl.setAttribute("d", getTrailPath(tr.path, tr.dist));
   });
 
-  // Рабочие
   AMBIENT.workers.forEach(function(w) {
     if (w.pause > 0) { w.pause -= dt; return; }
     w.dist += w.speed * dt * w.dir;
@@ -871,7 +847,6 @@ function ambientLoop(ts) {
     w.body.setAttribute("transform", "rotate(" + angle + ")");
   });
 
-  // САМОЛЕТ (Летит снизу вверх)
   if (AMBIENT.airplane) {
     var a = AMBIENT.airplane;
     if (a.active) {
@@ -930,7 +905,7 @@ function buildTruckStatus(){
   g.appendChild(el("rect", { x:-30, y:-8, width:60, height:16, rx:8, fill:"#ffffff", stroke:"#4a8a3a", "stroke-width":1.5, opacity:0.95 }));
   var t = el("text", { x:0, y:1, "text-anchor":"middle", "dominant-baseline":"middle", "font-family":"sans-serif", "font-size":"8", "font-weight":"bold", "fill":"#1f2d1c" });
   t.textContent = "Загрузка..."; g.appendChild(t);
-  TRUCK.statusEl = g; return g;
+  return g;
 }
 
 function buildTruckRoute(){
@@ -1133,26 +1108,134 @@ function clampViewBox(vb) {
 }
 
 function initPanZoom(){
-  var map = document.getElementById("map"), svg = APP.svg, startClientX = 0, startClientY = 0, startVB = null, isDragging = false, rafId = null;
-  map.addEventListener("mousedown", function(e){ if(e.button !== 0 || e.target.closest(".building-group")) return; isDragging = true; map.classList.add("dragging"); startClientX = e.clientX; startClientY = e.clientY; startVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h }; e.preventDefault(); });
+  var map = document.getElementById("map"), svg = APP.svg;
+  var startClientX = 0, startClientY = 0, startVB = null;
+  var isDragging = false, rafId = null;
+
+  // --- МЫШЬ (ПК) ---
+  map.addEventListener("mousedown", function(e){
+    if(e.button !== 0 || e.target.closest(".building-group")) return;
+    isDragging = true;
+    map.classList.add("dragging");
+    startClientX = e.clientX; startClientY = e.clientY;
+    startVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h };
+    e.preventDefault();
+  });
+
   window.addEventListener("mousemove", function(e){
     if(!isDragging) return;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(function() {
-      var rect = svg.getBoundingClientRect(), dxPx = e.clientX - startClientX, dyPx = e.clientY - startClientY;
+      var rect = svg.getBoundingClientRect();
+      var dxPx = e.clientX - startClientX, dyPx = e.clientY - startClientY;
       var dxSvg = dxPx * (startVB.w / rect.width), dySvg = dyPx * (startVB.h / rect.height);
       APP.viewBox = clampViewBox({ x: startVB.x - dxSvg, y: startVB.y - dySvg, w: startVB.w, h: startVB.h });
       applyViewBox();
     });
   });
-  window.addEventListener("mouseup", function(){ if(isDragging) { isDragging = false; map.classList.remove("dragging"); if (rafId) cancelAnimationFrame(rafId); } });
+
+  window.addEventListener("mouseup", function(){
+    if(isDragging) {
+      isDragging = false;
+      map.classList.remove("dragging");
+      if (rafId) cancelAnimationFrame(rafId);
+    }
+  });
+
+  // --- КОЛЕСО МЫШИ (ЗУМ) ---
   map.addEventListener("wheel", function(e){
-    e.preventDefault(); var rect = svg.getBoundingClientRect(), cx = (e.clientX - rect.left) / rect.width, cy = (e.clientY - rect.top) / rect.height;
-    var px = APP.viewBox.x + cx * APP.viewBox.w, py = APP.viewBox.y + cy * APP.viewBox.h, factor = e.deltaY < 0 ? 0.85 : 1/0.85;
+    e.preventDefault();
+    var rect = svg.getBoundingClientRect();
+    var cx = (e.clientX - rect.left) / rect.width, cy = (e.clientY - rect.top) / rect.height;
+    var px = APP.viewBox.x + cx * APP.viewBox.w, py = APP.viewBox.y + cy * APP.viewBox.h;
+    var factor = e.deltaY < 0 ? 0.85 : 1/0.85;
     var nw = APP.viewBox.w * factor, nh = APP.viewBox.h * factor;
     APP.viewBox = clampViewBox({ x: px - cx * nw, y: py - cy * nh, w: nw, h: nh });
     applyViewBox();
   }, { passive: false });
+
+  // --- ТАЧ-СОБЫТИЯ (МОБИЛЬНЫЕ) ---
+  var touchStartDist = 0;
+  var touchStartVB = null;
+
+  map.addEventListener("touchstart", function(e){
+    if(e.target.closest(".building-group")) return;
+    
+    if(e.touches.length === 1) {
+      isDragging = true;
+      startClientX = e.touches[0].clientX;
+      startClientY = e.touches[0].clientY;
+      startVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h };
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      touchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h };
+    }
+  }, { passive: false });
+
+  map.addEventListener("touchmove", function(e){
+    e.preventDefault(); // Останавливаем скролл страницы
+    
+    if(e.touches.length === 1 && isDragging && startVB) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(function() {
+        var rect = svg.getBoundingClientRect();
+        var dxPx = e.touches[0].clientX - startClientX;
+        var dyPx = e.touches[0].clientY - startClientY;
+        var dxSvg = dxPx * (startVB.w / rect.width);
+        var dySvg = dyPx * (startVB.h / rect.height);
+        APP.viewBox = clampViewBox({ x: startVB.x - dxSvg, y: startVB.y - dySvg, w: startVB.w, h: startVB.h });
+        applyViewBox();
+      });
+    } else if (e.touches.length === 2 && touchStartVB) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(function() {
+        var dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        var factor = touchStartDist / dist;
+        var nw = touchStartVB.w * factor;
+        var nh = touchStartVB.h * factor;
+        
+        var rect = svg.getBoundingClientRect();
+        var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        
+        var ratioX = (cx - rect.left) / rect.width;
+        var ratioY = (cy - rect.top) / rect.height;
+        
+        var px = touchStartVB.x + ratioX * touchStartVB.w;
+        var py = touchStartVB.y + ratioY * touchStartVB.h;
+        
+        APP.viewBox = clampViewBox({
+          x: px - ratioX * nw,
+          y: py - ratioY * nh,
+          w: nw,
+          h: nh
+        });
+        applyViewBox();
+      });
+    }
+  }, { passive: false });
+
+  map.addEventListener("touchend", function(e){
+    if (e.touches.length === 0) {
+      isDragging = false;
+      touchStartVB = null;
+      if (rafId) cancelAnimationFrame(rafId);
+    } else if (e.touches.length === 1) {
+      // Если отпустили один палец при зуме, переключаемся на панорамирование
+      isDragging = true;
+      startClientX = e.touches[0].clientX;
+      startClientY = e.touches[0].clientY;
+      startVB = { x: APP.viewBox.x, y: APP.viewBox.y, w: APP.viewBox.w, h: APP.viewBox.h };
+      touchStartVB = null;
+    }
+  });
 }
 
 function applyViewBox(){ var v = APP.viewBox; APP.svg.setAttribute("viewBox", v.x + " " + v.y + " " + v.w + " " + v.h); }
